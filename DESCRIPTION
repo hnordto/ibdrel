@@ -1,0 +1,33 @@
+Package: ibdrel
+Type: Package
+Title: Estimate and Rank Pairwise Genetic Relationships based on IBD Segments
+Version: 0.1.0
+Authors@R: c(
+    person(
+      "Henrik", "Nordtorp",
+      email = "hnordt@ous-hf.no",
+      role = c("aut", "cre")
+    )
+  )
+Description: R package and 'shiny' application for working with genetic relationships from segments identical by descent.
+License: GPL (>= 3)
+Depends:
+  R (>= 4.1)
+Imports:
+  shiny,
+  ibdsim2,
+  ggplot2,
+  bs4Dash,
+  gt,
+  DT,
+  scales,
+  matrixStats,
+  stringr,
+  verbalisr,
+  pedtools,
+  gtExtras,
+  dplyr
+Encoding: UTF-8
+Language: en-GB
+LazyData: true
+RoxygenNote: 7.3.2
