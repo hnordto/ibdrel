@@ -1,7 +1,7 @@
 
 # ibdRel
 
-ibdRel is a R package for working with genetic relationship estimation from simulated identity by descent (IBD) segments. 
+ibdRel is an R package for working with genetic relationship estimation from simulated identity by descent (IBD) segments. 
 A Shiny application for estimating and ranking possible pairwise genetic relationships is associated with the package.
 
 ## Installation

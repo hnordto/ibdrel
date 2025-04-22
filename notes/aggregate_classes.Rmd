@@ -1,0 +1,120 @@
+---
+title: "Aggregating Classes"
+author: "Henrik Nordtorp"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+This notebook explores the effects of aggregating classification results. Should classes/data be aggregated prior to classification, or should posterior probabilities be aggregated after classification? 
+
+```{r}
+library(ibdrel)
+library(pedtools)
+library(ibdsim2)
+library(dplyr)
+
+# Training data at the "relationship" level
+
+segmentDataRel = readRDS(system.file("data", "segments_unilineal.rds", package = "ibdrel"))
+
+# Pedigrees with associated metadata
+pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
+pedsMetadataRel = pedigreesMetadata(pedsDataRel)
+```
+
+Create a common "test" observation:
+
+```{r}
+set.seed(1234)
+test <- runif(100, min = 1, max = 50)
+test
+```
+
+
+
+Classify the data "as is":
+```{r}
+pdfuns_rel = lapply(segmentDataRel, preparePdfs)
+pred_rel = classify(test, pdfuns_rel)
+res.df.tmp = as.data.frame(pred_rel)
+res.df.tmp$Relationship = rownames(res.df.tmp)
+
+res_deg = merge(res.df.tmp, pedsMetadataRel, by = "Relationship",
+                all.x = T, all.y = F)
+```
+
+Classify the data at the "Donnelly" level:
+```{r}
+segmentDataClass = list()
+
+for (i in 1:length(segmentDataRel)) {
+  rel = names(segmentDataRel)[i]
+  don = pedsMetadataRel |> 
+    filter(Relationship == rel) |> 
+    select(class) |> as.character()
+  
+  data.rel = segmentDataRel[[i]]
+  
+  for (segment in data.rel) {
+    if (don %in% names(segmentDataClass)) {
+      segmentDataClass[[don]][[length(segmentDataClass[[don]])+1]] <- segment
+    } else {
+      segmentDataClass[[don]][[1]] <- segment
+    }
+  }
+    
+}
+
+pdfuns_don = lapply(segmentDataClass, preparePdfs)
+pred_don = classify(test, pdfuns_don)
+```
+
+Classify data at the "degree" level
+
+```{r}
+segmentDataDeg <- list()
+
+for (i in 1:length(segmentDataRel)) {
+  rel = names(segmentDataRel)[i]
+  deg = pedsMetadataRel |> 
+    filter(Relationship == rel) |> 
+    select(degree) |> as.character()
+  
+  data.rel = segmentDataRel[[i]]
+  
+  for (segment in data.rel) {
+    if (deg %in% names(segmentDataDeg)) {
+      segmentDataDeg[[deg]][[length(segmentDataDeg[[deg]])+1]] <- segment
+    } else {
+      segmentDataDeg[[deg]][[1]] <- segment
+    }
+  }
+    
+}
+
+pdfuns_deg = lapply(segmentDataDeg, preparePdfs)
+pred_deg = classify(test, pdfuns_deg)
+```
+
+
+Results
+
+At the degree level
+
+```{r}
+res_deg |> 
+  group_by(degree) |> 
+  summarise(p = sum(pred_rel)) -> res_deg
+pred_deg <- as.data.frame(pred_deg)
+pred_deg$degree <- rownames(pred_deg)
+
+df = merge(res_deg, pred_deg,
+           by.x = "degree", by.y = "degree")
+df = df |> 
+  pivot_longer(-degree, names_to="source", values_to="p")
+
+library(tidyverse)
+ggplot(df)+
+  geom_col(aes(x = degree, y = p, fill = source), position = "dodge")
+```
+

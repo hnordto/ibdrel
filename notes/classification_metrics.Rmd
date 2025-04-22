@@ -1,0 +1,68 @@
+---
+title: "classification_metrics"
+output: html_document
+---
+
+## Load data
+
+```{r}
+library(ibdrel)
+
+segmentDataRel = readRDS(system.file("data", "segments_unilineal.rds", package = "ibdrel"))
+segmentDataDeg = readRDS(system.file("data", "segments_unilineal_deg.rds", package = "ibdrel"))
+
+pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
+pedsMetadataRel = pedigreesMetadata(pedsDataRel)
+
+test <- readRDS("~/ibdrel/inst/data/segments_unilineal_deg_test.rds")
+```
+
+
+```{r}
+pdfuns <- lapply(segmentDataRel, preparePdfs)
+```
+
+```{r}
+res <- data.frame(true = character(),
+                  pred = character(),
+                  prob = numeric())
+
+for (i in 1:length(test)) {
+  rel = names(test)[i]
+  
+  data.rel = test[[i]]
+  
+  for (segment in data.rel) {
+    class = classify(segment, pdfuns)[1]
+    res.tmp <- data.frame(true = rel,
+                          pred = names(class),
+                          prob = class)
+    res <- rbind(res, res.tmp)
+  }
+}
+
+res <- merge(res, pedsMetadataRel,
+             by.x = "true", by.y = "Relationship",
+             all.x = TRUE, all.y = FALSE)
+
+res.p <- matrix(data = NA,
+                nrow = sum(sapply(test,length)),
+                ncol = length(test))
+colnames(res.p) <- names(test)
+
+counter = 1
+for (i in 1:length(test)) {
+  data.rel <- test[[i]]
+  for (j in 1:length(data.rel)) {
+    segment = data.rel[[j]]
+    class = classify(segment, pdfuns)
+    res.p[counter,] = class
+    counter = counter + 1
+  }
+}
+
+
+measures::Logloss(res.p, true)
+
+```
+
