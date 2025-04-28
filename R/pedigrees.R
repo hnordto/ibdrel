@@ -416,6 +416,7 @@ pedigreesMetadata = function(pedlist) {
 
 pedigreesMetadata = function(pedlist) {
   metadata = data.frame(Relationship = names(pedlist))
+  metadata$degree = sapply(pedlist, pedDegree)
 
   Donnelly.classes = groupDonnelly(pedlist, N = 100, seed = 1234)
 
@@ -428,14 +429,26 @@ pedigreesMetadata = function(pedlist) {
 
 }
 
+pedDegree = function(ped) { # Only supporting unilineal relationships as of now
+  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$degree
+}
+
+pedKappa = function(ped) { # Only supporting unilieal relationships as of now
+  ribd::kappaIBD(ped, ids = identifyLeave(ped))[[1]]$degree
+}
+
+pedKinship= function(ped) { # Only supporting unilineal relationships as of now
+  ribd::kinship(ped, ids = identifyLeaves(ped))[[1]]$degree
+}
+
 # Donnelly equivalences ---------
-# A simulation-based approach to identifying potential Donnelly-equivalences
+# A simulation-based approach to identify potential Donnelly-equivalences
 
 groupDonnelly <- function(pedlist, N, seed) {
   donnelly = list()
 
   i = 1
-  for (ped in peds) {
+  for (ped in pedlist) {
     sim = ibdsim2::ibdsim(ped, N = N, seed = seed, ids = identifyLeaves(ped))
     segments = postprocess.simulation(sim, ped)
 
