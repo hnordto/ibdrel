@@ -444,7 +444,7 @@ pedKinship= function(ped) { # Only supporting unilineal relationships as of now
 # Donnelly equivalences ---------
 # A simulation-based approach to identify potential Donnelly-equivalences
 
-groupDonnelly <- function(pedlist, N, seed) {
+groupDonnelly.dep <- function(pedlist, N, seed) {
   donnelly = list()
 
   i = 1
@@ -476,4 +476,39 @@ groupDonnelly <- function(pedlist, N, seed) {
   }
 
   return (donnelly.rels)
+}
+
+# More efficient approach using verbalisr() and skipping the simulation
+# Does not work on sex-specific paths
+# Only support unilieal relationships as of now
+# Avuncular and cousin are equal in this setting
+groupDonnelly = function(pedlist) {
+  i = 1
+  for (ped in pedlist) {
+    verb = verbalisr::verbalise(ped, ids = identifyLeaves(ped))
+    rel = verb[[1]]$rel
+    type = verb[[1]]$type
+    full = verb[[1]]$full
+    nSteps = sum(verb[[1]]$nSteps)
+
+    if (type == "cousin" | type == "avuncular") {
+      type = "cousin/avuncular"
+    }
+
+    class.identifier = paste0(type,"-",as.integer(full),"-",nSteps)
+
+    if (i == 1) {
+      grouper = data.frame(class = class.identifier,
+                           rel = rel)
+    } else {
+      grouper = rbind(grouper, data.frame(class = class.identifier,
+                                          rel = rel))
+    }
+
+    i = i + 1
+
+  }
+
+  return (grouper)
+
 }
