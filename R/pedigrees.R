@@ -414,31 +414,37 @@ pedigreesMetadata = function(pedlist) {
   return (metadata)
 }
 
-pedigreesMetadata = function(pedlist) {
-  metadata = data.frame(Relationship = names(pedlist))
+pedsMetadata = function(pedlist) {
+  metadata = data.frame(rel = names(pedlist))
   metadata$degree = sapply(pedlist, pedDegree)
 
-  Donnelly.classes = groupDonnelly(pedlist, N = 100, seed = 1234)
+  metadata$kappa0 = sapply(pedlist, pedKappa, 1)
+  metadata$kappa1 = sapply(pedlist, pedKappa, 2)
+  metadata$kappa2 = sapply(pedlist, pedKappa, 3)
+  metadata$kappa = paste0(metadata$kappa0, "-", metadata$kappa1, "-",
+                          metadata$kappa2)
 
-  metadata = merge(metadata, Donnelly.classes, by = "Relationship",
-                   all.x = T, all.y = F)
+  metadata$kinship = sapply(pedlist, pedKinship)
 
-  metadata
+  donnelly.classes = groupDonnelly(pedlist)
 
+  metadata = merge(metadata, donnelly.classes,
+                   by = "rel", all.x = TRUE, all.y = FALSE)
 
-
+  return(metadata)
 }
 
 pedDegree = function(ped) { # Only supporting unilineal relationships as of now
   verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$degree
 }
 
-pedKappa = function(ped) { # Only supporting unilieal relationships as of now
-  ribd::kappaIBD(ped, ids = identifyLeave(ped))[[1]]$degree
+pedKappa = function(ped, which.kappa) { # Only supporting unilieal relationships as of now
+  ribd::kappaIBD(ped, ids = identifyLeaves(ped))[which.kappa]
+
 }
 
 pedKinship= function(ped) { # Only supporting unilineal relationships as of now
-  ribd::kinship(ped, ids = identifyLeaves(ped))[[1]]$degree
+  ribd::kinship(ped, ids = identifyLeaves(ped))
 }
 
 # Donnelly equivalences ---------
