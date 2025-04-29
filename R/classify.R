@@ -3,6 +3,9 @@ prepareFeatures = function(lengthData, cutoff = 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
 
+  # Remove empty lists (simulations with no segments > cutoff)
+  lengthData <- lengthData[lapply(lengthData, length) > 0]
+
   features <- list(countPdf = lengths(lengthData),
                    totalPdf = vapply(lengthData, sum, FUN.VALUE = 1),
                    medianPdf = vapply(lengthData, median, FUN.VALUE = 1),
@@ -17,6 +20,9 @@ preparePdfs = function(lengthData, cutoff = 0) {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
+
+  # Remove empty lists (simulations with no segments > cutoff)
+  lengthData <- lengthData[lapply(lengthData, length) > 0]
 
   pdfs <- list(countPdf = lengths(lengthData) |>
                        density(from = 0) |> approxfun(rule = 2),
@@ -57,10 +63,15 @@ normalizeClassProbs = function(logprobs) {
   res = exp(logprobs - matrixStats::logSumExp(logprobs))
 }
 
-classify = function(obs, pdfuns) {
+classify = function(obs, pdfuns, sort = TRUE) {
   logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
   res = exp(logprobs - matrixStats::logSumExp(logprobs))
-  sort(res, decreasing = T)
+
+  if(isTRUE(sort)) {
+    sort(res, decreasing = T)
+  } else {
+    res
+  }
 }
 
 
@@ -114,4 +125,87 @@ computeMahalanobis <- function(features, obs) {
 distance <- function(obs, features) {
   res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
   res
+}
+
+## Performance
+
+testClassifier <- function(testsegments,
+                           pdfs,
+                           metadata,
+                           agg.level,
+                           all = FALSE) {
+  if(isFALSE(all)) {
+    res <- data.frame(true = character(),
+                      pred = character(),
+                      prob = numeric())
+  } else {
+    res_mat <- matrix(data = NA,
+                      nrow = sum(sapply(testsegments, length)),
+                      ncol = nrow(unique(metadata[agg.level])))
+  }
+
+  class_lst = c()
+  k = 1
+
+  for (i in 1:length(testsegments)) {
+    ped.rel = names(segmentDataTest)[i]
+    segments = testsegments[[i]]
+
+    true = metadata |>
+      filter(rel == ped.rel) |>
+      select(agg.level) |>
+      as.character()
+
+    if (!(true %in% class_lst)) {
+      class_lst = c(class_lst, true)
+    }
+
+
+    for (segment in segments) {
+      prediction = classify(segment, pdfs, sort = FALSE) # Very important!
+      prediction_top = classify(segment, pdfs, sort = TRUE)[1]
+
+      pred = metadata |>
+        filter(rel == names(prediction_top)) |>
+        select(agg.level) |>
+        as.character()
+
+      if (isFALSE(all)) {
+        res.tmp <- data.frame(true = true,
+                              pred = pred,
+                              prob = prediction_top)
+        res <- rbind(res, res.tmp)
+      } else {
+        res_mat[k, ] = prediction
+        k = k +1
+      }
+    }
+  }
+
+  if (isFALSE(all)) {
+    res <- res
+  } else {
+    colnames(res_mat) <- class_lst
+    res <- res_mat
+  }
+
+  return (res)
+} # Can be used to test both aggregation before and aggregation after!
+
+
+trueClasses <- function(testsegments,
+                        agg.level) {
+
+  truth <- c()
+
+  for (i in 1:length(testsegments)) {
+    true = metadata |>
+      filter(rel == names(testsegments)[i]) |>
+      select(agg.level) |>
+      as.character()
+
+    truth <- c(truth, rep(true, length(testsegments[[i]])))
+  }
+
+  return (truth)
 }
