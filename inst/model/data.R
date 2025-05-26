@@ -1,4 +1,5 @@
 library(ibdrel)
+library(ibdsim2)
 
 
 
