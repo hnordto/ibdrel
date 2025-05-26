@@ -99,24 +99,24 @@ computeMahalanobis <- function(features, obs) {
     return (NA)
   }
 
-  pca <- prcomp(features, center = TRUE, scale. = TRUE)
-  k <- which(cumsum(pca$sdev^2) / sum(pca$sdev^2) >= 0.95)[1]
+  #pca <- prcomp(features, center = TRUE, scale. = TRUE)
+  #k <- which(cumsum(pca$sdev^2) / sum(pca$sdev^2) >= 0.95)[1]
 
-  features.reduced <- pca$x[,1:k]
+  #features.reduced <- pca$x[,1:k]
 
-  obs.features.pca <- scale(obs.features,
-                            center = pca$center,
-                            scale = pca$scale) %*% pca$rotation[,1:k]
+  #obs.features.pca <- scale(obs.features,
+  #                          center = pca$center,
+  #                          scale = pca$scale) %*% pca$rotation[,1:k]
 
-  covmat <- computeCovariance(features.reduced)
+  covmat <- computeCovariance(features)
 
   if (all(covmat) == 0) { # If PO, covariance is 0 (no variation, always 50% IBD)
     return (NA)
   }
 
-  features.colmeans <- colMeans(features.reduced)
+  features.colmeans <- colMeans(features)
 
-  mdist <- stats::mahalanobis(obs.features.pca, features.colmeans, covmat, tol = 1e-20)
+  mdist <- stats::mahalanobis(obs.features, features.colmeans, covmat, tol = 1e-20)
 
   mdist
 
@@ -185,7 +185,7 @@ testClassifier <- function(testsegments,
   if (isFALSE(all)) {
     res <- res
   } else {
-    colnames(res_mat) <- class_lst
+    colnames(res_mat) <- names(prediction)
     res <- res_mat
   }
 
