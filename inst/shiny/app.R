@@ -13,19 +13,21 @@ library(pedtools)
 # Load data
 
 
-segmentDataRel = readRDS(system.file("data", "segments_unilineal.rds", package = "ibdrel"))
-segmentDataDeg = readRDS(system.file("data", "segments_unilineal_deg.rds", package = "ibdrel"))
+segmentDataRel = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
+segmentDataDon = readRDS(system.file("data", "segments_unilineal_donnelly.rds", package = "ibdrel"))
+segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
+segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
+segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
 
 pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
-pedsMetadataRel = readRDS(system.file("data", "peds_metadata_unilineal.rds", package = "ibdrel"))
-
+metadata = pedsMetadata(pedsDataRel)
 
 ui <- bs4Dash::bs4DashPage(
-  title = "ibdClassifier",
+  title = "ibdRel",
 
   header = bs4DashNavbar(
     status = "olive",
-    title = "ibdClassifier",
+    title = "ibdRel",
     navbarMenu(
       id = "navmenu",
       navbarTab(tabName = "analysis", text = "Analysis"),
@@ -36,33 +38,42 @@ ui <- bs4Dash::bs4DashPage(
 
 
   sidebar = dashboardSidebar(disable = TRUE, minified = FALSE),
+  controlbar = NULL,
+  footer = NULL,
 
   body = bs4DashBody(
+    useBusyIndicators(spinners = TRUE),
     tabItems(
       tabItem(
         "analysis",
         fluidRow(
           column(
-            width = 4,
+            width = 3,
             h3("Input"),
             textAreaInput("segText", "Segment lengths", rows = 10),
             numericInput("cutoff", "Cutoff", value = 0, min = 0, step = 1),
-            numericInput("num_results", "Number of results to display",
-                         value = 5, min = 1),
+            radioButtons("classLevel", "Classification level",
+                         choices = c("Relationship" = "rel",
+                                     "Equivalence classes" = "class",
+                                     "Kappa" = "kappa",
+                                     "Kinship" = "kinship",
+                                     "Degree" = "degree"),
+                         selected = "rel",
+                         inline = TRUE),
             actionButton("classify", "Classify")
           ),
           column(
-            width = 8,
+            width = 9,
             bs4TabCard(
               title = "Analysis",
               collapsible = FALSE,
               width = NULL,
               tabPanel(
-                title = "Overview",
+                title = "Classification",
                 fluidRow(
                   column(
                     width = 6,
-                    gt::gt_output("results_table"),
+                    gt::gt_output("results_table")
                   ),
                   column(
                     width = 6,
@@ -70,17 +81,6 @@ ui <- bs4Dash::bs4DashPage(
                     uiOutput("choose_ped")
                   )
                 )
-              ),
-              tabPanel(
-                title = "Variable plots",
-                uiOutput("choose_ped_var"),
-                uiOutput("choose_var1"),
-                uiOutput("choose_var2"),
-                plotOutput("varScatterplot")
-              ),
-              tabPanel(
-                title = "Full posterior table",
-                gt::gt_output("results_table_full")
               )
             )
           )
@@ -92,13 +92,6 @@ ui <- bs4Dash::bs4DashPage(
           column(
             width = 4,
             h3("Settings"),
-            radioButtons("classLevel", "Classification level",
-                         choices = c("Automatic" = "auto",
-                                     "Degree" = "degree",
-                                     "Relationship" = "relationship",
-                                     "Sex-specific relationship" = "sexspecific"),
-                         selected = "auto",
-                         inline = TRUE),
             radioButtons("posteriorProb", "Posterior probability",
                          choices = c("Absolute" = "absolute",
                                      "Relative" = "relative"),
@@ -123,6 +116,9 @@ ui <- bs4Dash::bs4DashPage(
           )
         )
       )
+    ),
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     )
   )
 )
@@ -134,23 +130,26 @@ server <- function(input, output, session) {
 
   trainingData = reactive({
     switch(input$classLevel,
-           auto = segmentDataRel,
-           degree = segmentDataDeg,
-           relationship = segmentDataRel) # not supported yet
+           rel = segmentDataRel,
+           class = segmentDataDon,
+           kappa = segmentDataKappa,
+           kinship = segmentDataKinship,
+           degree = segmentDataDeg)
+  })
+
+  aggLevel = reactive({input$classLevel})
+
+  metadata = reactive({
+    pedsMetadata(pedsDataRel)
   })
 
   peds = reactive({
     switch(input$classLevel,
-           auto = pedsDataRel,
-           degree = NULL,
-           relationship = pedsDataRel)
-  })
-
-  pedsMetadata = reactive({
-    switch(input$classLevel,
-           auto = pedsMetadataRel,
-           degree = NULL,
-           relationship = pedsMetadataRel)
+           rel = pedsDataRel,
+           class = NULL,
+           kappa = NULL,
+           kinship = NULL,
+           degree = NULL)
   })
 
   features = reactive({
@@ -204,16 +203,16 @@ server <- function(input, output, session) {
   # Plots
   output$varScatterplot <- renderPlot({
 
-    req(input$choose_ped_var, input$choose_var1, input$choose_var2)
+    req(input$name_clicked, input$choose_var1, input$choose_var2)
 
     varScatterplot(features(),
                    obsToFeatures(obs()),
-                   input$choose_ped_var,
+                   input$name_clicked,
                    input$choose_var1,
                    input$choose_var2)
   })
 
-  output$pedPlot <-renderPlot({
+  output$pedPlot <- renderPlot({
 
       validate(
         need(!is.null(peds()), "Pedigree plotting not supported for chosen settings.")
@@ -222,6 +221,7 @@ server <- function(input, output, session) {
       req(peds, input$choose_ped)
 
       ped = peds()[input$choose_ped]
+      ped.leaves = identifyLeaves(ped)
 
       tryCatch(
         plot(ped, cex = input$cex),
@@ -232,30 +232,36 @@ server <- function(input, output, session) {
         }
       )
 
-      plot(ped, cex = input$cex)
+      plot(ped, cex = input$cex,
+           labs = NULL,
+           hatched = ped.leaves,
+           fill = list(red = ped.leaves))
     })
+
 
 
   # Tables
 
   results_tbl = eventReactive(input$classify, {
-    tbl <- resultTable(pedsMetadata(),
+
+
+
+    tbl <- resultTable(metadata(),
                        posteriors(),
                        outliers(),
                        mdists(),
                        length(pdfuns()[[1]])-1,
-                       input$num_results)
-    tbl |> cols_hide(columns = c(Distance, Distance_p, Group, class))
+                       aggLevel())
+    tbl
   })
 
-  results_tbl_full = eventReactive(input$classify, {
-    tbl <- resultTable(pedsMetadata(),
-                       posteriors(),
-                       outliers(),
-                       mdists(),
-                       length(pdfuns()[[1]])-1,
-                       NULL)
-    tbl |> cols_hide(columns = c(Group, class))
+  output$rels_list = renderPrint({
+    req(input$name_clicked)
+
+    relsAtLevel(metadata(),
+                input$classLevel,
+                input$name_clicked)
+
   })
 
   output$results_table = render_gt({
@@ -264,6 +270,22 @@ server <- function(input, output, session) {
   output$results_table_full = render_gt({
     req(results_tbl_full())
   })
+
+  # Modals
+  observeEvent(input$name_clicked, {
+    showModal(modalDialog(
+      title = input$name_clicked,
+      h5("Relationships in class"),
+      uiOutput("rels_list"),
+      h5("Training data distribution (2D)"),
+      uiOutput("choose_var1"),
+      uiOutput("choose_var2"),
+      plotOutput("varScatterplot")
+    ))
+  })
+
+  output$test = renderPrint(posteriors())
+
 
   # SETINGS -----------------
 
