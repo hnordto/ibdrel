@@ -416,6 +416,7 @@ pedigreesMetadata = function(pedlist) {
 
 pedsMetadata = function(pedlist) {
   metadata = data.frame(rel = names(pedlist))
+  metadata$code = sapply(pedlist, pedCode)
   metadata$degree = sapply(pedlist, pedDegree)
 
   metadata$kappa0 = sapply(pedlist, pedKappa, 1)
@@ -432,6 +433,10 @@ pedsMetadata = function(pedlist) {
                    by = "rel", all.x = TRUE, all.y = FALSE)
 
   return(metadata)
+}
+
+pedCode = function(ped) {
+  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$code
 }
 
 pedDegree = function(ped) { # Only supporting unilineal relationships as of now
@@ -501,7 +506,13 @@ groupDonnelly = function(pedlist) {
       type = "cousin/avuncular"
     }
 
-    class.identifier = paste0(type,"-",as.integer(full),"-",nSteps)
+    if (!(type == "lineal")) {
+      class.identifier = paste0(type,"-",as.integer(full),"-",nSteps)
+    } else {
+      class.identifier = paste0(type, "-", nSteps)
+    }
+
+
 
     if (i == 1) {
       grouper = data.frame(class = class.identifier,
