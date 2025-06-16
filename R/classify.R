@@ -3,17 +3,42 @@ prepareFeatures = function(lengthData, cutoff = 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
 
-  # Remove empty lists (simulations with no segments > cutoff)
-  lengthData <- lengthData[lapply(lengthData, length) > 0]
+  length
 
-  features <- list(countPdf = lengths(lengthData),
+  # Remove empty lists (simulations with no segments > cutoff)
+  #lengthData <- lengthData[lapply(lengthData, length) > 0]
+
+  features <- list(countPdf = safe_lengths(lengthData),
                    totalPdf = vapply(lengthData, sum, FUN.VALUE = 1),
-                   medianPdf = vapply(lengthData, median, FUN.VALUE = 1),
-                   longestPdf = vapply(lengthData, max, FUN.VALUE = 1),
-                   shortestPdf = vapply(lengthData, min, FUN.VALUE = 1))
+                   medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1),
+                   longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1),
+                   shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1))
 
   return (features)
 
+}
+
+# Helpers
+
+safe_max <- function(x, default = 0) {
+  val <- max(x)
+  if (length(x) == 0 || val == -Inf) default else val
+}
+
+safe_min <- function(x, default = 0) {
+  val <- min(x)
+  if (length(x) == 0 || val == Inf) default else val
+}
+
+safe_median <- function(x, default = 0) {
+  val <- median(x)
+  if(length(x) == 0 || is.na(val)) default else val
+}
+
+safe_lengths <- function(lst) {
+  sapply(lst, function(x) {
+    if (identical(x,0)) 0 else length(x)
+  })
 }
 
 preparePdfs = function(lengthData, cutoff = 0) {
@@ -22,7 +47,7 @@ preparePdfs = function(lengthData, cutoff = 0) {
   }
 
   # Remove empty lists (simulations with no segments > cutoff)
-  lengthData <- lengthData[lapply(lengthData, length) > 0]
+  #lengthData <- lengthData[lapply(lengthData, length) > 0]
 
   pdfs <- list(countPdf = lengths(lengthData) |>
                        density(from = 0) |> approxfun(rule = 2),
@@ -76,6 +101,8 @@ classify = function(obs, pdfuns, sort = TRUE) {
 
 
 # Goodness-of-fit --------------------------
+
+
 
 computeCovariance <- function(features) {
   cov(as.data.frame(features), use = "pairwise.complete.obs")
