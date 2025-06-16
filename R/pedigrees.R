@@ -427,7 +427,7 @@ pedsMetadata = function(pedlist) {
 
   metadata$kinship = sapply(pedlist, pedKinship)
 
-  donnelly.classes = groupDonnelly(pedlist)
+  donnelly.classes = groupDonnelly(pedlist, names(pedlist))
 
   metadata = merge(metadata, donnelly.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
@@ -493,11 +493,11 @@ groupDonnelly.dep <- function(pedlist, N, seed) {
 # Does not work on sex-specific paths
 # Only support unilieal relationships as of now
 # Avuncular and cousin are equal in this setting
-groupDonnelly = function(pedlist) {
+groupDonnelly = function(pedlist, annotation) {
   i = 1
   for (ped in pedlist) {
     verb = verbalisr::verbalise(ped, ids = identifyLeaves(ped))
-    rel = verb[[1]]$rel
+    rel = annotation[i]
     type = verb[[1]]$type
     full = verb[[1]]$full
     nSteps = sum(verb[[1]]$nSteps)
