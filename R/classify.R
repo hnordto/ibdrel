@@ -3,16 +3,11 @@ prepareFeatures = function(lengthData, cutoff = 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
 
-  length
-
   # Remove empty lists (simulations with no segments > cutoff)
   #lengthData <- lengthData[lapply(lengthData, length) > 0]
 
-  features <- list(countPdf = safe_lengths(lengthData),
-                   totalPdf = vapply(lengthData, sum, FUN.VALUE = 1),
-                   medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1),
-                   longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1),
-                   shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1))
+  features <- list(countPdf = lengths(lengthData),
+                   totalPdf = vapply(lengthData, sum, FUN.VALUE = 1))
 
   return (features)
 
@@ -55,11 +50,11 @@ preparePdfs = function(lengthData, cutoff = 0) {
                        density(from = 0) |> approxfun(rule = 2),
                      lengthPdf = unlist(lengthData, use.names = FALSE) |>
                        density(from = 0) |> approxfun(rule = 2),
-                     medianPdf = vapply(lengthData, median, FUN.VALUE = 1) |>
+                     medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1) |>
                        density(from = 0) |> approxfun(rule = 2),
-                     longestPdf = vapply(lengthData, max, FUN.VALUE = 1) |>
+                     longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
                        density(from = 0) |> approxfun(rule = 2),
-                     shortestPdf = vapply(lengthData, min, FUN.VALUE = 1) |>
+                     shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1) |>
                        density(from = 0) |> approxfun(rule = 2))
 
   return (pdfs)
