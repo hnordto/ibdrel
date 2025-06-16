@@ -116,7 +116,7 @@ postprocessSimulations = function(simlist,
 }
 
 
-lengthIBD = function(segments) {
+lengthIBD.dep = function(segments) {
   relationships = unique(segments$kinship)
 
   segmentsLst = list()
@@ -144,3 +144,37 @@ lengthIBD = function(segments) {
   return (segmentsLst)
 
 }
+
+# Updated method for postprocessing
+
+extractLength <- function(mtrx) {
+  unname(mtrx[,5]-mtrx[,4])
+}
+
+lengthIBD = function(simlist,
+                     pedlist,
+                     annotationlist,
+                     cutoff = 0) {
+
+  segmentLst = list()
+
+  for (i in 1:length(simlist)) {
+    sim = simlist[[i]]
+    ped = pedlist[[i]]
+    annotation = annotationlist[i]
+
+    segments = ibdsim2::findPattern(sim, pattern = list(carriers = identifyLeaves(ped)),
+                                    cutoff = cutoff, unit = "cm")
+    segments = lapply(segments, extractLength)
+
+    segmentLst = append(segmentLst, list(segments))
+
+  }
+
+  names(segmentLst) = annotationlist
+
+  return (segmentLst)
+
+}
+
+
