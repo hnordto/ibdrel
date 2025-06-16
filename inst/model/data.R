@@ -13,8 +13,8 @@ rels <- rbind(rels_paternal, rels_maternal)
 peds <- constructPedigrees(rels)
 annotation <- annotatePedigrees(peds)
 
-peds_training <- peds[1:77] # Only paternal, for simplicity
-names(peds_training) <- names(segments_training_rel)
+#peds_training <- peds[1:77] # Only paternal, for simplicity
+names(peds) <- annotation
 
 
 aggregate.segments <- function(segments, metadata, metadata.agg.column) {
@@ -24,6 +24,7 @@ aggregate.segments <- function(segments, metadata, metadata.agg.column) {
     rel.id = names(segments)[i]
     agg.id = metadata |>
       dplyr::filter(rel == rel.id) |>
+      slice(1) |>
       dplyr::select(metadata.agg.column) |>
       as.character()
 
@@ -52,17 +53,19 @@ aggregate.segments <- function(segments, metadata, metadata.agg.column) {
 
 sims_training <- ibdSimulations(peds, N = 1000, seed = NULL)
 
-segments_df_training <- postprocessSimulations(sims_training, peds,
-                                               annotation,
-                                               cutoff = 0)
-segments_df_training$sim <- paste0(segments_df_training$sim, "-", segments_df_training$kinship) # Unique simulation identifier, keep all segments intact
-segments_df_training$kinship <- sub("-([pm]+)?($|\\s.*)", "", segments_df_training$kinship) # Ignore sex paths
+#segments_df_training <- postprocessSimulations(sims_training, peds,
+#                                              annotation,
+#                                               cutoff = 0)
+#segments_df_training$sim <- paste0(segments_df_training$sim, "-", segments_df_training$kinship) # Unique simulation identifier, keep all segments intact
+#segments_df_training$kinship <- sub("-([pm]+)?($|\\s.*)", "", segments_df_training$kinship) # Ignore sex paths
 
-segments_training_rel <- lengthIBD(segments_df_training)
+#segments_training_rel <- lengthIBD(segments_df_training)
+
+segments_training_rel <- lengthIBD(sims_training, peds, annotation)
 
 # Aggregation
 
-metadata = pedsMetadata(peds_training)
+metadata = pedsMetadata(peds)
 
 segments_training_donnelly <- aggregate.segments(segments_training_rel,
                                                  metadata,
