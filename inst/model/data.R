@@ -1,5 +1,6 @@
 library(ibdrel)
 library(ibdsim2)
+library(dplyr)
 
 
 
@@ -89,7 +90,7 @@ saveRDS(segments_training_donnelly, file = "inst/data/segments_unilineal_donnell
 saveRDS(segments_training_kappa, file = "inst/data/segments_unilineal_kappa.rds")
 saveRDS(segments_training_kinship, file = "inst/data/segments_unilineal_kinship.rds")
 saveRDS(segments_training_degree, file = "inst/data/segments_unilineal_degree.rds")
-saveRDS(peds_training, file = "inst/data/peds_unilineal.rds")
+saveRDS(peds, file = "inst/data/peds_unilineal.rds")
 
 
 
