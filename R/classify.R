@@ -144,6 +144,42 @@ computeMahalanobis <- function(features, obs) {
 
 }
 
+computeLOF <- function(features, obs) {
+  features <- as.data.frame(features)
+  obs.features <- as.data.frame(obsToFeatures(obs))
+  colnames(obs.features) <- colnames(features)
+
+  data <- rbind(features, obs.features)
+  data$countPdf <- log1p(data$countPdf)
+  data <- scale(data)
+
+  # Use a subsample if nrow > 1000 (approximation to enhance efficiency)
+
+  if (nrow(data) > 5000) {
+    idx <- sample(1:nrow(data), 5000, replace = FALSE)
+    data <- data[idx,]
+  }
+
+  lofs <- dbscan::lof(data, minPts = 10)
+  lof.threshold <- quantile(lofs, p = .9)
+  lof <- lofs[length(lofs)] # LOF of obs
+
+  list(lof = lof, threshold = lof.threshold)
+
+
+
+}
+
+LOF <- function(obs, features) {
+  res = lapply(features, function(x) computeLOF(x, obs))
+
+  lof <- as.numeric(lapply(res, function(r) r$lof))
+  threshold <- as.numeric(lapply(res, function(r) r$threshold))
+
+  list(lof = lof, threshold = threshold)
+
+}
+
 distance <- function(obs, features) {
   res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
   res

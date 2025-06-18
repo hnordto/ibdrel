@@ -1,5 +1,6 @@
 library(shiny)
 library(ibdrel)
+library(ibdsim2)
 library(bs4Dash)
 library(ggplot2)
 library(stringr)
@@ -27,7 +28,11 @@ ui <- bs4Dash::bs4DashPage(
 
   header = bs4DashNavbar(
     status = "olive",
-    title = "ibdRel",
+    title =
+      div(
+        class = "apptitle",
+        "ibdRel"
+      ),
     navbarMenu(
       id = "navmenu",
       navbarTab(tabName = "analysis", text = "Analysis"),
@@ -51,10 +56,10 @@ ui <- bs4Dash::bs4DashPage(
             width = 3,
             h3("Input"),
             textAreaInput("segText", "Segment lengths", rows = 10),
-            numericInput("cutoff", "Cutoff", value = 0, min = 0, step = 1),
+            numericInput("cutoff", "Cutoff", value = 7, min = 0, step = 1),
             radioButtons("classLevel", "Classification level",
                          choices = c("Relationship" = "rel",
-                                     "Equivalence classes" = "class",
+                                     "Equivalence class" = "class",
                                      "Kappa" = "kappa",
                                      "Kinship" = "kinship",
                                      "Degree" = "degree"),
@@ -97,6 +102,10 @@ ui <- bs4Dash::bs4DashPage(
                                      "Relative" = "relative"),
                          selected = "absolute",
                          inline = TRUE),
+            radioButtons("normalizedProb", "Probability normalization",
+                         choices = c("Normalized" = "normalized",
+                                     "Unnormalized" = "unnormalized"),
+                         selected = "normalized"),
             numericInput("outlier_threshold", "Chi-square Mahalanobis outlier threshold",
                          value = 0.05),
             numericInput("cex", "CEX", value = 1)
@@ -153,11 +162,16 @@ server <- function(input, output, session) {
   })
 
   features = reactive({
-    lapply(trainingData(), prepareFeatures)
+    lapply(trainingData(), prepareFeatures, cutoff = input$cutoff)
   })
 
   pdfuns = reactive({
-    lapply(trainingData(), preparePdfs)
+    req(trainingData())
+    lapply(trainingData(), preparePdfs, cutoff = input$cutoff)
+  })
+  # Force this to run immediately
+  observe({
+    pdfuns()
   })
 
   obs = reactive({
@@ -168,14 +182,6 @@ server <- function(input, output, session) {
     selectInput("choose_ped_var", "Class", choices = names(posteriors()))
   })
 
-  output$choose_var1 <- renderUI({
-    selectInput("choose_var1", "Variable 1", choices = names(pdfuns()[[1]]))
-  })
-
-  output$choose_var2 <- renderUI({
-    selectInput("choose_var2", "Variable 2", choices = names(pdfuns()[[1]]))
-  })
-
   output$choose_ped <- renderUI({
     selectInput("choose_ped", "Choose pedigree", choices = names(posteriors()))
   })
@@ -183,17 +189,16 @@ server <- function(input, output, session) {
   # CALCULATIONS -----------------
 
   posteriors = reactiveVal(NULL)
-  mdists = reactiveVal(NULL)
+  lofs = reactiveVal(NULL)
   outliers = reactiveVal(NULL)
   observeEvent(input$classify, {
     post = classify(obs(), pdfuns())
     posteriors(post)
 
-    mdist = distance(obs(), features())
-    mdists(mdist)
+    lof = LOF(obs(), features())
+    lofs(lof$lof)
 
-    outlier = ifelse(mdist > qchisq(p = 1-input$outlier_threshold,
-                                    df = length(pdfuns()[[1]])-1), T, F)
+    outlier = ifelse(lof$lof > lof$threshold, TRUE, FALSE)
     outliers(outlier)
 
   })
@@ -203,13 +208,11 @@ server <- function(input, output, session) {
   # Plots
   output$varScatterplot <- renderPlot({
 
-    req(input$name_clicked, input$choose_var1, input$choose_var2)
+    req(input$name_clicked)
 
-    varScatterplot(features(),
-                   obsToFeatures(obs()),
-                   input$name_clicked,
-                   input$choose_var1,
-                   input$choose_var2)
+    outlierPlot(features(),
+                obsToFeatures(obs()),
+                input$name_clicked)
   })
 
   output$pedPlot <- renderPlot({
@@ -249,10 +252,16 @@ server <- function(input, output, session) {
     tbl <- resultTable(metadata(),
                        posteriors(),
                        outliers(),
-                       mdists(),
+                       lofs(),
                        length(pdfuns()[[1]])-1,
                        aggLevel())
     tbl
+  })
+
+  output$eqclass_list = renderPrint({
+    req(input$name_clicked)
+
+
   })
 
   output$rels_list = renderPrint({

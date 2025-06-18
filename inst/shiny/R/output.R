@@ -3,6 +3,25 @@
 
 # Plots ------------------------
 
+outlierPlot <- function(features, obs_features, ped) {
+  count = features[[ped]][["countPdf"]]
+  total = features[[ped]][["totalPdf"]]
+
+  count.obs = obs_features[[1]][["countPdf"]]
+  total.obs = obs_features[[1]][["totalPdf"]]
+
+  data = data.frame(count, total)
+  data.obs = data.frame(count = count.obs, total = total.obs)
+
+  ggplot() +
+    geom_point(data = data, mapping = aes(x = count, y = total)) +
+    geom_point(data = data.obs, mapping = aes(x = count, y = total),
+               shape = 4, stroke = 2, size = 5, colour = "darkred") +
+    labs(x = "Number of segments",
+         y = "Total IBD segment length (cM)") +
+    theme_minimal()
+}
+
 varScatterplot <- function(features, obs_features, ped, var1_selection, var2_selection) {
   var1 = features[[ped]][[var1_selection]]
   var2 = features[[ped]][[var2_selection]]
@@ -43,10 +62,11 @@ relsAtLevel <- function(metadata,
   res[[1]]
 }
 
+
 resultTable <- function(metadata,
                         posteriors,
                         outliers,
-                        mdists,
+                        lofs,
                         df,
                         aggLevel) {
 
@@ -62,14 +82,13 @@ resultTable <- function(metadata,
     mergeCol = "degree"
   }
 
-  selectCol = c("Relationship", "Posterior", "Outlier")
+  selectCol = c("Relationship", "Posterior", "Outlier", "LOF")
 
 
   results <- data.frame(Relationship = names(posteriors),
                         Posterior = round(as.numeric(posteriors), 4),
                         Outlier = outliers,
-                        Distance = mdists,
-                        Distance_p = pchisq(mdists, df, lower.tail = FALSE))
+                        LOF = lofs)
 
   results <- merge(results, metadata, sort = FALSE,
                    by.x = "Relationship", by.y = mergeCol,
@@ -78,12 +97,6 @@ resultTable <- function(metadata,
   if (mergeCol == "class") {
     results$class <- results$Relationship
   }
-
-  results <- results |>
-    group_by(Relationship) |>
-    slice(1) |>
-    ungroup() |>
-    arrange(desc(Posterior)) # Need to remove ordering
 
   hideCol = setdiff(colnames(results), selectCol)
 
@@ -177,7 +190,6 @@ resultTable.dep <- function(metadata, posteriors, outliers, mdists, df, slice) {
     text_transform(
       locations = cells_body(columns = Relationship),
       fn = function(x) {
-        # x is the *values* of Relationship; we transform each to a clickable link
         lapply(x, function(val) {
           gt::html(
             paste0(
