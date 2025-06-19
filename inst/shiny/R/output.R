@@ -98,6 +98,8 @@ resultTable <- function(metadata,
     results$class <- results$Relationship
   }
 
+  results <- distinct(results, Relationship, .keep_all = TRUE)
+
   hideCol = setdiff(colnames(results), selectCol)
 
   #results$Outlier = ifelse(isTRUE(results$Outlier), "Yes", "No")
