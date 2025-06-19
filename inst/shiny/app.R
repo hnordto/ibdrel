@@ -86,6 +86,20 @@ ui <- bs4Dash::bs4DashPage(
                     uiOutput("choose_ped")
                   )
                 )
+              ),
+              tabPanel(
+                title = "Pairwise test",
+                fluidRow(
+                  column(
+                    width = 6,
+                    uiOutput("hypothesis_1"),
+                    uiOutput("hypothesis_2")
+                  ),
+                  column(
+                    width = 4,
+                    uiOutput("pairwise_lr")
+                  )
+                )
               )
             )
           )
@@ -201,6 +215,30 @@ server <- function(input, output, session) {
     outlier = ifelse(lof$lof > lof$threshold, TRUE, FALSE)
     outliers(outlier)
 
+  })
+
+  output$hypothesis_1 <- renderUI({
+    selectInput("hypothesis_1", "Hypothesis 1", choices = names(posteriors()))
+  })
+
+  output$hypothesis_2 <- renderUI({
+    selectInput("hypothesis_2", "Hypothesis 2", choices = names(posteriors()))
+  })
+
+  pairwise_lr <- reactive({
+    req(input$hypothesis_1, input$hypothesis_2)
+
+    loglik1 <- posteriors()[[input$hypothesis_1]]
+    loglik2 <- posteriors()[[input$hypothesis_2]]
+
+    loglik1 / loglik2
+
+  })
+
+  output$pairwise_lr <- renderPrint({
+    req(pairwise_lr())
+
+    pairwise_lr()
   })
 
   # OUTPUTS -----------------
