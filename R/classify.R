@@ -85,15 +85,17 @@ normalizeClassProbs = function(logprobs) {
 
 classify = function(obs, pdfuns, sort = TRUE) {
   logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
-  res = exp(logprobs - matrixStats::logSumExp(logprobs))
 
   if(isTRUE(sort)) {
-    sort(res, decreasing = T)
+    sort(logprobs, decreasing = T)
   } else {
-    res
+    logprobs
   }
 }
 
+normalizePosteriors = function(posteriors) {
+  exp(posteriors - matrixStats::logSumExp(posteriors))
+}
 
 # Goodness-of-fit --------------------------
 
@@ -160,7 +162,7 @@ computeLOF <- function(features, obs) {
     data <- data[idx,]
   }
 
-  lofs <- dbscan::lof(data, minPts = 10)
+  lofs <- dbscan::lof(data, minPts = 30)
   lof.threshold <- quantile(lofs, p = .9)
   lof <- lofs[length(lofs)] # LOF of obs
 

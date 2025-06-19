@@ -207,7 +207,13 @@ server <- function(input, output, session) {
   outliers = reactiveVal(NULL)
   observeEvent(input$classify, {
     post = classify(obs(), pdfuns())
-    posteriors(post)
+
+    if (input$normalizedProb == "unnormalized") {
+      posteriors(post)
+    } else if (input$normalizedProb == "normalized") {
+      post = normalizePosteriors(post)
+      posteriors(post)
+    }
 
     lof = LOF(obs(), features())
     lofs(lof$lof)
