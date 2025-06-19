@@ -129,10 +129,12 @@ resultTable <- function(metadata,
       locations = cells_body(columns = Relationship),
       fn = function(x) {
         lapply(x, function(val) {
+          val_js <- gsub("'", "&#39", jsonlite::toJSON(val, auto_unbox = TRUE))
+          val_html <- htmltools::htmlEscape(val)
           gt::html(
             paste0(
-              "<a href='#' onclick=\"Shiny.setInputValue('name_clicked', '", val, "', {priority: 'event'})\">",
-              val,
+              "<a href='#' onclick='Shiny.setInputValue(\"name_clicked\", ", val_js, ", {priority: \"event\"})'>",
+              val_html,
               "</a>"
             )
           )
