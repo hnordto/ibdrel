@@ -352,6 +352,16 @@ constructPedigrees = function(pedigrees_df) {
 
 }
 
+# Helper functions from verbalisr
+
+vrb = function(x, ids = leaves(x), paths = FALSE, ...) {
+  format(verbalise(x, ids), includePaths = paths, ...)
+}
+
+vrbAbbr = function(x, ids = leaves(x)) {
+  vrb(x, ids, abbreviate = TRUE, simplify = TRUE, cap = FALSE)
+}
+
 annotatePedigree = function(ped, ids = NULL) {
 
   if (is.null(ids)) {
@@ -359,12 +369,17 @@ annotatePedigree = function(ped, ids = NULL) {
   }
 
   relationships = verbalisr::verbalise(ped, ids = leaves)
+  relationships_abb = vrbAbbr(ped, ids = leaves)
 
 
   for (i in 1:length(relationships)) {
     relationship = relationships[[i]]
-    relationship_str = relationship$rel
+    relationship_str = relationships_abb
     relationship_sexpath <- relationship$sexPath
+
+    if (length(rawToChar(unique(charToRaw(relationship_sexpath)))) == 1) {
+      relationship_sexpath <- rawToChar(unique(charToRaw(relationship_sexpath)))
+    }
 
     annotation = paste0(relationship_str, "-",relationship_sexpath)
 
