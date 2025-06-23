@@ -83,7 +83,8 @@ normalizeClassProbs = function(logprobs) {
   res = exp(logprobs - matrixStats::logSumExp(logprobs))
 }
 
-classify = function(obs, pdfuns, sort = TRUE) {
+classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
+  obs = obs[obs > cutoff]
   logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
 
   if(isTRUE(sort)) {
@@ -152,13 +153,13 @@ computeLOF <- function(features, obs) {
   colnames(obs.features) <- colnames(features)
 
   data <- rbind(features, obs.features)
-  data$countPdf <- log1p(data$countPdf)
+  #data$countPdf <- log1p(data$countPdf)
   data <- scale(data)
 
   # Use a subsample if nrow > 1000 (approximation to enhance efficiency)
 
-  if (nrow(data) > 5000) {
-    idx <- sample(1:nrow(data), 5000, replace = FALSE)
+  if (nrow(data) > 10000) {
+    idx <- sample(1:nrow(data), 10000, replace = FALSE)
     data <- data[idx,]
   }
 
@@ -172,20 +173,42 @@ computeLOF <- function(features, obs) {
 
 }
 
-LOF <- function(obs, features) {
+LOF <- function(obs, features, orderLst, top_n) {
+
+  order.idx <- match(names(orderLst), names(features))
+
+  features.full <- features
+  features <- features[order.idx]
+  features <- features[1:top_n]
+
   res = lapply(features, function(x) computeLOF(x, obs))
 
   lof <- as.numeric(lapply(res, function(r) r$lof))
   threshold <- as.numeric(lapply(res, function(r) r$threshold))
 
+  lof <- c(lof, rep(NA, length(features.full)-top_n))
+  threshold <- c(threshold, rep(NA, length(features.full)-top_n))
+
   list(lof = lof, threshold = threshold)
 
 }
 
-distance <- function(obs, features) {
+distance <- function(obs, features, orderLst, top_n) {
+
+  order.idx <- match(names(orderLst), names(features))
+
+  features.full <- features
+  features <- features[order.idx]
+  features <- features[1:top_n]
+
   res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
+
+  res = c(res, rep(NA, length(features.full)-top_n))
+
   res
 }
+
+
 
 ## Performance
 
