@@ -15,6 +15,7 @@ library(pedtools)
 
 
 segmentDataRel = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
+
 segmentDataDon = readRDS(system.file("data", "segments_unilineal_donnelly.rds", package = "ibdrel"))
 segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
 segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
@@ -24,6 +25,9 @@ pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdre
 metadata = pedsMetadata(pedsDataRel)
 
 ui <- bs4Dash::bs4DashPage(
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ),
   title = "ibdRel",
 
   header = bs4DashNavbar(
@@ -31,7 +35,8 @@ ui <- bs4Dash::bs4DashPage(
     title =
       div(
         class = "apptitle",
-        "ibdRel"
+        "ibdRel",
+        style = "font-size: 2rem; font-family: helvetica; margin: 0rem 0rem 0rem 1.5rem; color: white"
       ),
     navbarMenu(
       id = "navmenu",
@@ -120,6 +125,8 @@ ui <- bs4Dash::bs4DashPage(
                          choices = c("Normalized" = "normalized",
                                      "Unnormalized" = "unnormalized"),
                          selected = "normalized"),
+            numericInput("n_outlier", "Number of classes for outlier calculation",
+                         value = 3),
             numericInput("outlier_threshold", "Chi-square Mahalanobis outlier threshold",
                          value = 0.05),
             numericInput("cex", "CEX", value = 1)
@@ -139,9 +146,6 @@ ui <- bs4Dash::bs4DashPage(
           )
         )
       )
-    ),
-    tags$head(
-      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     )
   )
 )
@@ -189,7 +193,10 @@ server <- function(input, output, session) {
   })
 
   obs = reactive({
-    as.numeric(input$segText |> strsplit("\n") |> unlist())
+    res = as.numeric(input$segText |> strsplit("\n") |> unlist())
+    # Ensure that input contains no segments of length < cutoff
+    res = res[res > input$cutoff]
+    res
   })
 
   output$choose_ped_var <- renderUI({
@@ -201,12 +208,13 @@ server <- function(input, output, session) {
   })
 
   # CALCULATIONS -----------------
-
+10
   posteriors = reactiveVal(NULL)
   lofs = reactiveVal(NULL)
+  mdists = reactiveVal(NULL)
   outliers = reactiveVal(NULL)
   observeEvent(input$classify, {
-    post = classify(obs(), pdfuns())
+    post = classify(obs(), pdfuns(), input$cutoff, sort = TRUE) # !!!!
 
     if (input$normalizedProb == "unnormalized") {
       posteriors(post)
@@ -215,8 +223,11 @@ server <- function(input, output, session) {
       posteriors(post)
     }
 
-    lof = LOF(obs(), features())
+    lof = LOF(obs(), features(), orderLst = posteriors(), top_n = input$n_outlier)
     lofs(lof$lof)
+
+    mdist = distance(obs(), features(), orderLst = posteriors(), top_n = input$n_outlier)
+    mdists(mdist)
 
     outlier = ifelse(lof$lof > lof$threshold, TRUE, FALSE)
     outliers(outlier)
@@ -297,6 +308,7 @@ server <- function(input, output, session) {
                        posteriors(),
                        outliers(),
                        lofs(),
+                       mdists(),
                        length(pdfuns()[[1]])-1,
                        aggLevel())
     tbl
@@ -308,12 +320,12 @@ server <- function(input, output, session) {
 
   })
 
-  output$rels_list = renderPrint({
+  output$rels_list = renderText({
     req(input$name_clicked)
 
-    relsAtLevel(metadata(),
+    paste0(relsAtLevel(metadata(),
                 input$classLevel,
-                input$name_clicked)
+                input$name_clicked), "\n")
 
   })
 
@@ -336,8 +348,6 @@ server <- function(input, output, session) {
       plotOutput("varScatterplot")
     ))
   })
-
-  output$test = renderPrint(posteriors())
 
 
   # SETINGS -----------------
