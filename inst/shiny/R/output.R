@@ -148,7 +148,7 @@ resultTable <- function(metadata,
           )
         })
       }
-    )
+    ) |>
     gt_theme_538() -> results
 
 
