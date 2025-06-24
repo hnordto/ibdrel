@@ -14,9 +14,12 @@ outlierPlot <- function(features, obs_features, ped) {
   data.obs = data.frame(count = count.obs, total = total.obs)
 
   ggplot() +
-    geom_point(data = data, mapping = aes(x = count, y = total)) +
+    geom_jitter(data = data, mapping = aes(x = count, y = total),
+                alpha = .5) +
+    stat_ellipse(data = data, mapping = aes(x = count, y = total), size = 1.1,
+                 alpha = .75) +
     geom_point(data = data.obs, mapping = aes(x = count, y = total),
-               shape = 4, stroke = 2, size = 5, colour = "darkred") +
+               shape = 4, stroke = 2, size = 5, colour = "red2") +
     labs(x = "Number of segments",
          y = "Total IBD segment length (cM)") +
     theme_minimal()
@@ -34,8 +37,9 @@ varScatterplot <- function(features, obs_features, ped, var1_selection, var2_sel
 
   ggplot() +
     geom_point(data = data, mapping = aes(x = var1, y = var2)) +
+    stat_ellipse(data = data, mapping = aes(x = var1, y = var2), size = 1.1) +
     geom_point(data = data.obs, mapping = aes(x = var1, y = var2),
-               shape = 4, stroke = 2, size = 5, colour = "darkred") +
+               shape = 4, stroke = 2, size = 5, colour = "red2") +
     labs(x = var1_selection,
          y = var2_selection) +
     theme_minimal()
@@ -67,6 +71,7 @@ resultTable <- function(metadata,
                         posteriors,
                         outliers,
                         lofs,
+                        mdists,
                         df,
                         aggLevel) {
 
@@ -82,13 +87,14 @@ resultTable <- function(metadata,
     mergeCol = "degree"
   }
 
-  selectCol = c("Relationship", "Posterior", "Outlier", "LOF")
+  selectCol = c("Relationship", "Likelihood", "Outlier", "LOF")
 
 
   results <- data.frame(Relationship = names(posteriors),
-                        Posterior = round(as.numeric(posteriors), 4),
+                        Likelihood = round(as.numeric(posteriors), 4),
                         Outlier = outliers,
-                        LOF = lofs)
+                        LOF = lofs,
+                        Mahalanobis = mdists)
 
   results <- merge(results, metadata, sort = FALSE,
                    by.x = "Relationship", by.y = mergeCol,
@@ -142,7 +148,7 @@ resultTable <- function(metadata,
           )
         })
       }
-    ) |>
+    )
     gt_theme_538() -> results
 
 

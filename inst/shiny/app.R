@@ -60,10 +60,11 @@ ui <- bs4Dash::bs4DashPage(
           column(
             width = 3,
             h3("Input"),
-            textAreaInput("segText", "Segment lengths", rows = 10),
+            tooltip(textAreaInput("segText", "Segment lengths", rows = 10),
+                    title = "IBD segment lengths in cM."),
             numericInput("cutoff", "Cutoff", value = 7, min = 0, step = 1),
-            radioButtons("classLevel", "Classification level",
-                         choices = c("Relationship" = "rel",
+            radioButtons("classLevel", "Classification resolution",
+                         choices = c("Pedigree" = "rel",
                                      "Equivalence class" = "class",
                                      "Kappa" = "kappa",
                                      "Kinship" = "kinship",
@@ -83,7 +84,9 @@ ui <- bs4Dash::bs4DashPage(
                 fluidRow(
                   column(
                     width = 6,
-                    gt::gt_output("results_table")
+                    div(gt::gt_output("results_table"),
+                        style = "height: 300px"),
+                    style = "overflow: auto"
                   ),
                   column(
                     width = 6,
