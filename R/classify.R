@@ -246,7 +246,9 @@ testClassifier <- function(testsegments,
 
     for (segment in segments) {
       prediction = classify(segment, pdfs, sort = FALSE) # Very important!
+      prediction = normalizeClassProbs(prediction)
       prediction_top = classify(segment, pdfs, sort = TRUE)[1]
+    #  prediction_top = normalizeClassProbs(prediction_top)
 
       pred = metadata |>
         filter(rel == names(prediction_top)) |>
