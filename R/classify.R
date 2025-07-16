@@ -8,6 +8,9 @@ prepareFeatures = function(lengthData, cutoff = 0) {
 
   features <- list(countPdf = lengths(lengthData),
                    totalPdf = vapply(lengthData, sum, FUN.VALUE = 1))
+                   #medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1),
+                   #longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1),
+                   #shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1))
 
   return (features)
 
@@ -36,7 +39,7 @@ safe_lengths <- function(lst) {
   })
 }
 
-preparePdfs = function(lengthData, cutoff = 0) {
+preparePdfs = function(lengthData, cutoff = 0, bw = "bw") {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
@@ -45,30 +48,60 @@ preparePdfs = function(lengthData, cutoff = 0) {
   #lengthData <- lengthData[lapply(lengthData, length) > 0]
 
   pdfs <- list(countPdf = lengths(lengthData) |>
-                       density(from = 0) |> approxfun(rule = 2),
+                       density(from = 0, bw = bw) |> approxfun(rule = 2),
                      totalPdf = vapply(lengthData, sum, FUN.VALUE = 1) |>
-                       density(from = 0) |> approxfun(rule = 2),
-                     lengthPdf = unlist(lengthData, use.names = FALSE) |>
-                       density(from = 0) |> approxfun(rule = 2),
+                       density(from = 0, bw = bw) |> approxfun(rule = 2),
+                     #lengthPdf = unlist(lengthData, use.names = FALSE) |>
+                    #   density(from = 0) |> approxfun(rule = 2),
                      medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1) |>
-                       density(from = 0) |> approxfun(rule = 2),
+                       density(from = 0, bw = bw) |> approxfun(rule = 2),
                      longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
-                       density(from = 0) |> approxfun(rule = 2),
+                       density(from = 0, bw = bw) |> approxfun(rule = 2),
                      shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1) |>
-                       density(from = 0) |> approxfun(rule = 2))
+                       density(from = 0, bw = bw) |> approxfun(rule = 2))
 
   return (pdfs)
 
 }
 
 classProb = function(obs, pdfs, log = T) {
-  p0 = pdfs$countPdf(length(obs))
-  p1 = pdfs$totalPdf(sum(obs))
-  p2 = pdfs$medianPdf(median(obs))
-  p3 = pdfs$longestPdf(max(obs))
-  p4 = pdfs$shortestPdf(min(obs))
 
-  probs = c(p0,p1,p2,p3,p4)
+  var.names <- names(pdfs)
+
+  probs = c()
+
+  if ("countPdf" %in% var.names) {
+    probs = c(probs, pdfs$countPdf(length(obs)))
+  }
+
+  if ("totalPdf" %in% var.names) {
+    probs = c(probs, pdfs$totalPdf(sum(obs)))
+  }
+
+  if ("lengthPdf" %in% var.names) {
+    probs = c(probs, pdfs$lengthPdf(obs))
+  }
+
+  if ("medianPdf" %in% var.names) {
+    probs = c(probs, pdfs$medianPdf(median(obs)))
+  }
+
+  if ("longestPdf" %in% var.names) {
+    probs = c(probs, pdfs$longestPdf(max(obs)))
+  }
+
+  if ("shortestPdf" %in% var.names) {
+    probs = c(probs, pdfs$shortestPdf(min(obs)))
+  }
+
+#  p0 = pdfs$countPdf(length(obs))
+#  p1 = pdfs$totalPdf(sum(obs))
+#  p2 = pdfs$medianPdf(median(obs))
+#  p3 = pdfs$longestPdf(max(obs))
+#  p4 = pdfs$shortestPdf(min(obs))
+  # p5 = pdfs$lengthPdf(obs)
+
+ # probs = c(p0,p1,p2,p3,p4, p5)
 
   if (log) sum(log(probs)) else prod(probs)
 
@@ -231,7 +264,7 @@ testClassifier <- function(testsegments,
   k = 1
 
   for (i in 1:length(testsegments)) {
-    ped.rel = names(segmentDataTest)[i]
+    ped.rel = names(testsegments)[i]
     segments = testsegments[[i]]
 
     true = metadata |>
@@ -279,6 +312,7 @@ testClassifier <- function(testsegments,
 
 
 trueClasses <- function(testsegments,
+                        metadata,
                         agg.level) {
 
   truth <- c()
