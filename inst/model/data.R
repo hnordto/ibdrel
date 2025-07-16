@@ -1,17 +1,28 @@
 library(ibdrel)
 library(ibdsim2)
+library(verbalisr)
 library(dplyr)
+
 
 
 
 rels <- readRDS("~/ibdclassifier/inst/data/unilineal_relationships_degree11.rds")
 
-rels_paternal <- rels |> group_by(type, degree, removal, nGen, cousDeg, half) |>
+rels <- removeSymmetries(rels)
+
+rels_close <- rels |> filter(degree %in% c(1,2,3,4))
+rels_distant <- rels |> filter(!(degree %in% c(1,2,3,4)))
+
+rels_paternal <- rels_distant |> group_by(type, degree, removal, nGen, cousDeg, half) |>
   slice_head(n = 1)
-rels_maternal <- rels |> group_by(type, degree, removal, nGen, cousDeg, half) |>
+rels_maternal <- rels_distant |> group_by(type, degree, removal, nGen, cousDeg, half) |>
   slice_tail(n = 1)
-rels <- rbind(rels_paternal, rels_maternal)
+rels <- rbind(rels_close, rels_paternal, rels_maternal)
 peds <- constructPedigrees(rels)
+
+# Remove duplicates
+peds <- peds[!duplicated(peds)]
+
 annotation <- annotatePedigrees(peds)
 
 #peds_training <- peds[1:77] # Only paternal, for simplicity
@@ -68,7 +79,7 @@ segments_training_rel <- lengthIBD(sims_training, peds, annotation)
 
 metadata = pedsMetadata(peds)
 
-segments_training_donnelly <- aggregate.segments(segments_training_rel,
+segments_training_eqclass <- aggregate.segments(segments_training_rel,
                                                  metadata,
                                                  "class")
 
@@ -86,7 +97,7 @@ segments_training_degree <- aggregate.segments(segments_training_rel,
 # Save data
 
 saveRDS(segments_training_rel, file = "inst/data/segments_unilineal_rel.rds")
-saveRDS(segments_training_donnelly, file = "inst/data/segments_unilineal_donnelly.rds")
+saveRDS(segments_training_eqclass, file = "inst/data/segments_unilineal_eqclass.rds")
 saveRDS(segments_training_kappa, file = "inst/data/segments_unilineal_kappa.rds")
 saveRDS(segments_training_kinship, file = "inst/data/segments_unilineal_kinship.rds")
 saveRDS(segments_training_degree, file = "inst/data/segments_unilineal_degree.rds")
@@ -99,21 +110,28 @@ saveRDS(peds, file = "inst/data/peds_unilineal.rds")
 ##########################
 # GENERATE TEST DATA     #
 ##########################
+set.seed(16072025)
+test.seed = sample(1000:10000,length(peds))
+sims_test <- ibdSimulations(peds, N = 1000, seed = test.seed)
 
-sims_test <- ibdSimulations(peds, N = 100, seed = NULL)
 
+#segments_df_test <- postprocessSimulations(sims_test,
+#                                           peds,
+#                                           annotation,
+#                                           cutoff = 7)
+#segments_df_test$sim <- paste0(segments_df_test$sim, "-", segments_df_test$kinship)
+#segments_df_test$kinship <- sub("-([pm]+)?($|\\s.*)", "", segments_df_test$kinship) # Ignore sex paths
 
-segments_df_test <- postprocessSimulations(sims_test,
-                                           peds,
-                                           annotation,
-                                           cutoff = 7)
-segments_df_test$sim <- paste0(segments_df_test$sim, "-", segments_df_test$kinship)
-segments_df_test$kinship <- sub("-([pm]+)?($|\\s.*)", "", segments_df_test$kinship) # Ignore sex paths
-
-segments_test <- lengthIBD(segments_df_test)
+segments_test <- lengthIBD(sims_test, peds, annotation)
 
 saveRDS(segments_test, file = "inst/data/segments_unilineal_rel_test.rds")
 
+segments_test_eq <- aggregate.segments(segments_test,
+                                       metadata,
+                                       "class")
+saveRDS(segments_test_eq, file = "inst/data/segments_unilineal_eq_test.rds")
 
-
-
+segments_test_degree <- aggregate.segments(segments_test,
+                                           metadata,
+                                           "degree")
+saveRDS(segments_test_degree, file = "inst/data/segments_unilineal_deg_test.rds")
