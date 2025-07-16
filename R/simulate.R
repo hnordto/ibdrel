@@ -18,6 +18,8 @@ ibdSimulations = function(pedlist,
 
   if (is.null(seed)) {
     seeds = seq(1:length(pedlist))
+  } else {
+    seeds = seed
   }
 
   simulations = list()
