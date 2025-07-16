@@ -191,6 +191,18 @@ sexCombinations = function(sexPathLength, ordered = T) {
   return (combinations)
 }
 
+strReverse <- function(x)
+  sapply(lapply(strsplit(x, NULL), rev), paste, collapse="") # Get the reverse of a stirng, e.g. a sexpat
+
+removeSymmetries <- function(rels.df) {
+  rels.df$sexPathRev = strReverse(rels.df$sexPath)
+  rels.df <- rels.df[!duplicated(apply(rels.df, 1, function(x)
+    paste(sort(x), collapse = ''))),]
+  rels.df <- subset(rels.df, select = -c(sexPathRev))
+  return (rels.df)
+}
+
+
 # ---- CREATING PEDIGREES ----
 
 swpSx = function(x, ids)
@@ -374,15 +386,19 @@ annotatePedigree = function(ped, ids = NULL) {
 
   for (i in 1:length(relationships)) {
     relationship = relationships[[i]]
-    relationship_str = relationships_abb
+    relationship_str = relationship$code
     relationship_sexpath <- relationship$sexPath
 
-    if (length(rawToChar(unique(charToRaw(relationship_sexpath)))) == 1) {
-      relationship_sexpath <- rawToChar(unique(charToRaw(relationship_sexpath)))
+    relationship_sexpath_split <- unique(strsplit(relationship_sexpath,"")[[1]])
+    if (length(relationship_sexpath_split) == 1) {
+      relationship_sexpath <- relationship_sexpath_split[1]
     }
 
-    annotation = paste0(relationship_str, "-",relationship_sexpath)
-
+    if (relationship_sexpath == "") {
+      annotation = paste0(relationship_str)
+    } else {
+      annotation = paste0(relationship_str, "-",relationship_sexpath)
+    }
   }
 
   return (annotation)
@@ -432,6 +448,7 @@ pedigreesMetadata = function(pedlist) {
 pedsMetadata = function(pedlist) {
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
+  metadata$details = lapply(pedlist, pedDetails)
   metadata$degree = sapply(pedlist, pedDegree)
 
   metadata$kappa0 = sapply(pedlist, pedKappa, 1)
@@ -452,6 +469,10 @@ pedsMetadata = function(pedlist) {
 
 pedCode = function(ped) {
   verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$code
+}
+
+pedDetails = function(ped) {
+  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$rel
 }
 
 pedDegree = function(ped) { # Only supporting unilineal relationships as of now
@@ -515,16 +536,46 @@ groupDonnelly = function(pedlist, annotation) {
     rel = annotation[i]
     type = verb[[1]]$type
     full = verb[[1]]$full
+    code = verb[[1]]$code
+    degree = verb[[1]]$degree
+    l1 = verb[[1]]$v1
+    l2 = verb[[1]]$v2
+    l.l1 = length(l1)
+    l.l2 = length(l2)
+    sexpath = strsplit(rel, "-")[[1]][2]
     nSteps = sum(verb[[1]]$nSteps)
 
-    if (type == "cousin" | type == "avuncular") {
-      type = "cousin/avuncular"
+    if (type == "cousin") {
+      if (isTRUE(full)) { # if full
+        class.identifier = paste0("fc-",degree,"-",sexpath)
+      } else {
+        class.identifier = paste0("hc-", degree, "-", sexpath)
+      }
     }
 
-    if (!(type == "lineal")) {
-      class.identifier = paste0(type,"-",as.integer(full),"-",nSteps)
-    } else {
-      class.identifier = paste0(type, "-", nSteps)
+    if (type == "avuncular") {
+      if (isTRUE(full)) {
+        class.identifier = paste0("fav-",degree,"-",sexpath)
+      } else {
+        class.identifier = paste0("hav-", degree, "-", sexpath)
+      }
+    }
+
+    if (type == "lineal") {
+
+      if (degree == 1) {
+        class.identifier = paste0("lin-",degree)
+      } else {
+        class.identifier = paste0("lin-", degree, "-", sexpath)
+      }
+    }
+
+    if (type == "sibling") {
+      if (isTRUE(full)) {
+        class.identifier = paste0("sib-", degree)
+      } else {
+        class.identifier = paste0("hsib-",degree,"-",sexpath)
+      }
     }
 
 
