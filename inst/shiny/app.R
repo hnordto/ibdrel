@@ -16,9 +16,9 @@ library(pedtools)
 
 segmentDataRel = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
 
-segmentDataDon = readRDS(system.file("data", "segments_unilineal_donnelly.rds", package = "ibdrel"))
+segmentDataDon = readRDS(system.file("data", "segments_unilineal_eqclass.rds", package = "ibdrel"))
 segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
-segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
+#segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
 segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
 
 pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
@@ -106,7 +106,13 @@ ui <- bs4Dash::bs4DashPage(
                   column(
                     width = 4,
                     uiOutput("pairwise_lr")
-                  )
+                  ),
+                  withMathJax(),
+                  div(helpText(
+                    "The pairwise test log-likelihood ratio (LR) is computed as",
+                    "$$\\text{LR}=\\frac{P\\left(\\text{IBD data}|H_1\\right)}{P\\left(\\text{IBD data}|H_2\\right)}$$",
+                    "where the probabilities are computed as the unnormalized log-likelihood of the data based on the simulated training data."
+                  ), style = "font-size: 0.75rem")
                 )
               )
             )
@@ -213,6 +219,7 @@ server <- function(input, output, session) {
   # CALCULATIONS -----------------
 10
   posteriors = reactiveVal(NULL)
+  likelihoods_un = reactiveVal(NULL)
   lofs = reactiveVal(NULL)
   mdists = reactiveVal(NULL)
   outliers = reactiveVal(NULL)
@@ -221,7 +228,9 @@ server <- function(input, output, session) {
 
     if (input$normalizedProb == "unnormalized") {
       posteriors(post)
+      likelihoods_un(post)
     } else if (input$normalizedProb == "normalized") {
+      likelihoods_un(post)
       post = normalizePosteriors(post)
       posteriors(post)
     }
@@ -248,10 +257,12 @@ server <- function(input, output, session) {
   pairwise_lr <- reactive({
     req(input$hypothesis_1, input$hypothesis_2)
 
-    loglik1 <- posteriors()[[input$hypothesis_1]]
-    loglik2 <- posteriors()[[input$hypothesis_2]]
+    loglik1 <- likelihoods_un()[[input$hypothesis_1]]
+    loglik2 <- likelihoods_un()[[input$hypothesis_2]]
 
-    loglik1 / loglik2
+    lr = loglik1 / loglik2
+
+    withMathJax(sprintf("$$\\text{LR}=%.03f$$",lr))
 
   })
 
