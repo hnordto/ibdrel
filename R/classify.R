@@ -39,7 +39,7 @@ safe_lengths <- function(lst) {
   })
 }
 
-preparePdfs = function(lengthData, cutoff = 0, bw = "bw") {
+preparePdfs = function(lengthData, cutoff = 0, bw = "nrd0") {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
