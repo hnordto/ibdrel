@@ -15,37 +15,10 @@ suppressPackageStartupMessages({
 
 })
 
-
-segmentDataRel = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
-
-
-# Tmp aggregate function: Implement in ibdrel later
-
-aggregate.segments <- function(segments, metadata, metadata.agg.column) {
-  aggregatedSegments = list()
-
-  for (i in 1:length(segments)) {
-    rel.id = names(segments)[i]
-    agg.id = metadata |>
-      dplyr::filter(rel == rel.id) |>
-      slice(1) |>
-      dplyr::select(metadata.agg.column) |>
-      as.character()
-
-    segments.rel <- segments[[i]]
-
-    for (segment in segments.rel) {
-      if (agg.id %in% names(aggregatedSegments)) {
-        aggregatedSegments[[agg.id]][[length(aggregatedSegments[[agg.id]])+1]] <- segment
-      } else {
-        aggregatedSegments[[agg.id]][[1]] <- segment
-      }
-    }
-  }
-
-  return (aggregatedSegments)
-
-}
+# Data
+segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
+pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
+metadata = ibdrel::pedsMetadata(pedsDataRel)
 
 
 
@@ -53,15 +26,14 @@ aggregate.segments <- function(segments, metadata, metadata.agg.column) {
 
 #segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
 #segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
-segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
+#segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
 
-pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
-metadata = ibdrel::pedsMetadata(pedsDataRel)
 
-segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
-segmentData = aggregate.segments(segmentData,
-                                 metadata,
-                                 "eqclass.detailed")
+
+#segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
+#segmentData = aggregate.segments(segmentData,
+#                                 metadata,
+#                                 "eqclass.detailed")
 
 
 inputBoxUI <- function(id) {
@@ -114,14 +86,22 @@ inputBoxServer = function(id, data) {
     observe({
       if (input$classLevel == "eqclass-detailed") {
         class.col = "eqclass.detailed"
-        data[["segments"]] = segmentData # for now
       } else if (input$classLevel == "eqclass") {
         class.col = "eqclass"
-        data[["segments"]] = segmentData
-      } else if (input$classLevel == "degree") {
+      } else if (input$classLevel == "kappa") {
+        class.col = "kappa"
+      } else if (input$classLevel == "kinship") {
+        class.col = "kinship"
+      } else if(input$classLevel == "degree") {
         class.col = "degree"
-        data[["segments"]] = segmentDataDeg
       }
+
+      resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
+      data[["resolutions"]] <- resolutions
+
+      data[["segments"]] = sapply(resolutions, function(x) {
+        aggregateSegments(segmentData, metadata, x)
+      }, simplify = FALSE)
 
       metadata$class = metadata[[class.col]]
       data[["metadata"]] = metadata
@@ -138,10 +118,13 @@ inputBoxServer = function(id, data) {
 
       #data[["segments"]] <- data[["segments"]][names(data[["segments"]]) %in% input$clasSelection]
 
+      data[["features"]] <- lapply(data[["segments"]], function(x) {
+        lapply(x, prepareFeatures, cutoff = input$cutoff)
+      })
 
-      data[["features"]] = lapply(data[["segments"]], prepareFeatures, cutoff = input$cutoff)
-      data[["pdfs"]] = lapply(data[["segments"]], preparePdfs, cutoff = input$cutoff)
-
+      data[["pdfs"]] <- lapply(data[["segments"]], function(x) {
+        lapply(x, preparePdfs, cutoff = input$cutoff)
+      })
     })
 
     observeEvent(input$segmentInput, {
@@ -154,12 +137,18 @@ inputBoxServer = function(id, data) {
 
     observeEvent(input$segmentInput, {
       req(data[["obs"]], data[["pdfs"]])
-      likelihoods = classify(data[["obs"]], data[["pdfs"]], input$cutoff, sort = TRUE)
-      data[["likelihoods"]][["raw"]] = likelihoods
-      data[["likelihoods"]][["norm"]] = ibdrel::normalizePosteriors(likelihoods)
 
-      #data[["mdists"]] = distance(data[["obs"]], data[["features"]], orderLst = data[["likelihoods"]], top_n = input$n_outlier)
+      data[["likelihoods"]][["raw"]] = lapply(data[["pdfs"]], function(x) {
+        classify(data[["obs"]], x, cutoff = input$cutoff, sort = TRUE)
+      })
+      data[["likelihoods"]][["norm"]] = lapply(data[["likelihoods"]][["raw"]],
+                                              ibdrel::normalizePosteriors)
     })
+
+    observe({
+      #data[["mdists"]] = distance(data[["obs"]], data[["features"]], orderLst = data[["likelihoods"]])
+    })
+
   })
 
 }

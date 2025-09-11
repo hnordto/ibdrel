@@ -1,8 +1,5 @@
 
 
-# Load data
-
-
 ui = dashboardPage(
 
   # Header
@@ -38,6 +35,7 @@ ui = dashboardPage(
       # Likelihood table
       column(
         width = 4,
+
         likelihoodBoxUI("likelihoodTable")
       ),
 
