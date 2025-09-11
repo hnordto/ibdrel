@@ -1,392 +1,73 @@
-library(shiny)
-library(ibdrel)
-library(ibdsim2)
-library(bs4Dash)
-library(ggplot2)
-library(stringr)
-library(gt)
-library(DT)
-library(scales)
-library(dplyr)
-library(gtExtras)
-library(pedtools)
+
 
 # Load data
 
 
-segmentDataRel = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
+ui = dashboardPage(
 
-segmentDataDon = readRDS(system.file("data", "segments_unilineal_eqclass.rds", package = "ibdrel"))
-segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
-#segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
-segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
+  # Header
+  header = dashboardHeader(
 
-pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
-metadata = pedsMetadata(pedsDataRel)
-
-ui <- bs4Dash::bs4DashPage(
-  tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-  ),
-  title = "ibdRel",
-
-  header = bs4DashNavbar(
     status = "olive",
+
     title =
       div(
         class = "apptitle",
-        "ibdRel",
-        style = "font-size: 2rem; font-family: helvetica; margin: 0rem 0rem 0rem 1.5rem; color: white"
-      ),
-    navbarMenu(
-      id = "navmenu",
-      navbarTab(tabName = "analysis", text = "Analysis"),
-      navbarTab(tabName = "settings", text = "Settings")
-    )
+        "ibdrel"
+      )
   ),
 
+  # Sidebar
+  sidebar = dashboardSidebar(disable = TRUE, minified = FALSE, width = 0),
 
+  # Body
 
-  sidebar = dashboardSidebar(disable = TRUE, minified = FALSE),
-  controlbar = NULL,
-  footer = NULL,
+  body = dashboardBody(
+    tags$head(
+      tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    ),
 
-  body = bs4DashBody(
-    useBusyIndicators(spinners = TRUE),
-    tabItems(
-      tabItem(
-        "analysis",
-        fluidRow(
-          column(
-            width = 3,
-            h3("Input"),
-            tooltip(textAreaInput("segText", "Segment lengths", rows = 10),
-                    title = "IBD segment lengths in cM."),
-            numericInput("cutoff", "Cutoff", value = 7, min = 0, step = 1),
-            radioButtons("classLevel", "Classification resolution",
-                         choices = c("Pedigree" = "rel",
-                                     "Equivalence class" = "class",
-                                     "Kappa" = "kappa",
-                                     "Kinship" = "kinship",
-                                     "Degree" = "degree"),
-                         selected = "rel",
-                         inline = TRUE),
-            actionButton("classify", "Classify")
-          ),
-          column(
-            width = 9,
-            bs4TabCard(
-              title = "Analysis",
-              collapsible = FALSE,
-              width = NULL,
-              tabPanel(
-                title = "Classification",
-                fluidRow(
-                  column(
-                    width = 6,
-                    div(gt::gt_output("results_table"),
-                        style = "height: 300px"),
-                    style = "overflow: auto"
-                  ),
-                  column(
-                    width = 6,
-                    plotOutput("pedPlot"),
-                    uiOutput("choose_ped")
-                  )
-                )
-              ),
-              tabPanel(
-                title = "Pairwise test",
-                fluidRow(
-                  column(
-                    width = 6,
-                    uiOutput("hypothesis_1"),
-                    uiOutput("hypothesis_2")
-                  ),
-                  column(
-                    width = 4,
-                    uiOutput("pairwise_lr")
-                  ),
-                  withMathJax(),
-                  div(helpText(
-                    "The pairwise test log-likelihood ratio (LR) is computed as",
-                    "$$\\text{LR}=\\frac{P\\left(\\text{IBD data}|H_1\\right)}{P\\left(\\text{IBD data}|H_2\\right)}$$",
-                    "where the probabilities are computed as the unnormalized log-likelihood of the data based on the simulated training data."
-                  ), style = "font-size: 0.75rem")
-                )
-              )
-            )
-          )
-        )
+    fluidRow(
+
+      # Input
+      column(
+        width = 3,
+        inputBoxUI("input")
       ),
-      tabItem(
-        "settings",
-        fluidRow(
-          column(
-            width = 4,
-            h3("Settings"),
-            radioButtons("posteriorProb", "Posterior probability",
-                         choices = c("Absolute" = "absolute",
-                                     "Relative" = "relative"),
-                         selected = "absolute",
-                         inline = TRUE),
-            radioButtons("normalizedProb", "Probability normalization",
-                         choices = c("Normalized" = "normalized",
-                                     "Unnormalized" = "unnormalized"),
-                         selected = "normalized"),
-            numericInput("n_outlier", "Number of classes for outlier calculation",
-                         value = 3),
-            numericInput("outlier_threshold", "Chi-square Mahalanobis outlier threshold",
-                         value = 0.05),
-            numericInput("cex", "CEX", value = 1)
-          ),
-          column(
-            width = 8,
-            bs4TabCard(
-              title = "Model",
-              collapsible = FALSE,
-              width = NULL,
-              tabPanel(
-                title = "Model",
-                DTOutput("class_tbl"),
-                actionButton("update_classes", "Update class selection")
-              )
-            )
-          )
-        )
+
+      # Likelihood table
+      column(
+        width = 4,
+        likelihoodBoxUI("likelihoodTable")
+      ),
+
+      column(
+        width = 5,
+        classBoxUI("classInfo")
       )
+
+
+
+
+
+
     )
+
+
+
   )
+
+
 )
-# gt::gt_output("posterior_table")
 
 server <- function(input, output, session) {
 
-  # DATA AND INPUTS -----------------
+  data = reactiveValues()
+  data[["obs"]] = NULL
 
-  trainingData = reactive({
-    switch(input$classLevel,
-           rel = segmentDataRel,
-           class = segmentDataDon,
-           kappa = segmentDataKappa,
-           kinship = segmentDataKinship,
-           degree = segmentDataDeg)
-  })
-
-  aggLevel = reactive({input$classLevel})
-
-  metadata = reactive({
-    pedsMetadata(pedsDataRel)
-  })
-
-  peds = reactive({
-    switch(input$classLevel,
-           rel = pedsDataRel,
-           class = NULL,
-           kappa = NULL,
-           kinship = NULL,
-           degree = NULL)
-  })
-
-  features = reactive({
-    lapply(trainingData(), prepareFeatures, cutoff = input$cutoff)
-  })
-
-  pdfuns = reactive({
-    req(trainingData())
-    lapply(trainingData(), preparePdfs, cutoff = input$cutoff)
-  })
-  # Force this to run immediately
-  observe({
-    pdfuns()
-  })
-
-  obs = reactive({
-    res = as.numeric(input$segText |> strsplit("\n") |> unlist())
-    # Ensure that input contains no segments of length < cutoff
-    res = res[res > input$cutoff]
-    res
-  })
-
-  output$choose_ped_var <- renderUI({
-    selectInput("choose_ped_var", "Class", choices = names(posteriors()))
-  })
-
-  output$choose_ped <- renderUI({
-    selectInput("choose_ped", "Choose pedigree", choices = names(posteriors()))
-  })
-
-  # CALCULATIONS -----------------
-10
-  posteriors = reactiveVal(NULL)
-  likelihoods_un = reactiveVal(NULL)
-  lofs = reactiveVal(NULL)
-  mdists = reactiveVal(NULL)
-  outliers = reactiveVal(NULL)
-  observeEvent(input$classify, {
-    post = classify(obs(), pdfuns(), input$cutoff, sort = TRUE) # !!!!
-
-    if (input$normalizedProb == "unnormalized") {
-      posteriors(post)
-      likelihoods_un(post)
-    } else if (input$normalizedProb == "normalized") {
-      likelihoods_un(post)
-      post = normalizePosteriors(post)
-      posteriors(post)
-    }
-
-    lof = LOF(obs(), features(), orderLst = posteriors(), top_n = input$n_outlier)
-    lofs(lof$lof)
-
-    mdist = distance(obs(), features(), orderLst = posteriors(), top_n = input$n_outlier)
-    mdists(mdist)
-
-    outlier = ifelse(lof$lof > lof$threshold, TRUE, FALSE)
-    outliers(outlier)
-
-  })
-
-  output$hypothesis_1 <- renderUI({
-    selectInput("hypothesis_1", "Hypothesis 1", choices = names(posteriors()))
-  })
-
-  output$hypothesis_2 <- renderUI({
-    selectInput("hypothesis_2", "Hypothesis 2", choices = names(posteriors()))
-  })
-
-  pairwise_lr <- reactive({
-    req(input$hypothesis_1, input$hypothesis_2)
-
-    loglik1 <- likelihoods_un()[[input$hypothesis_1]]
-    loglik2 <- likelihoods_un()[[input$hypothesis_2]]
-
-    lr = loglik1 / loglik2
-
-    withMathJax(sprintf("$$\\text{LR}=%.03f$$",lr))
-
-  })
-
-  output$pairwise_lr <- renderPrint({
-    req(pairwise_lr())
-
-    pairwise_lr()
-  })
-
-  # OUTPUTS -----------------
-
-  # Plots
-  output$varScatterplot <- renderPlot({
-
-    req(input$name_clicked)
-
-    outlierPlot(features(),
-                obsToFeatures(obs()),
-                input$name_clicked)
-  })
-
-  output$pedPlot <- renderPlot({
-
-      validate(
-        need(!is.null(peds()), "Pedigree plotting not supported for chosen settings.")
-      )
-
-      req(peds, input$choose_ped)
-
-      ped = peds()[input$choose_ped]
-      ped.leaves = identifyLeaves(ped)
-
-      tryCatch(
-        plot(ped, cex = input$cex),
-        error = function(e) {
-          plot.new()
-          msg = if(grepl("reduce cex", conditionMessage(e))) "(Too big for plot region. Reduce cex in 'Settings'.)" else conditionMessage(e)
-          mtext(msg, line = 0, col = 2)
-        }
-      )
-
-      plot(ped, cex = input$cex,
-           labs = NULL,
-           hatched = ped.leaves,
-           fill = list(red = ped.leaves))
-    })
-
-
-
-  # Tables
-
-  results_tbl = eventReactive(input$classify, {
-
-
-
-    tbl <- resultTable(metadata(),
-                       posteriors(),
-                       outliers(),
-                       lofs(),
-                       mdists(),
-                       length(pdfuns()[[1]])-1,
-                       aggLevel())
-    tbl
-  })
-
-  output$eqclass_list = renderPrint({
-    req(input$name_clicked)
-
-
-  })
-
-  output$rels_list = renderText({
-    req(input$name_clicked)
-
-    paste0(relsAtLevel(metadata(),
-                input$classLevel,
-                input$name_clicked), "\n")
-
-  })
-
-  output$results_table = render_gt({
-    req(results_tbl())
-  })
-  output$results_table_full = render_gt({
-    req(results_tbl_full())
-  })
-
-  # Modals
-  observeEvent(input$name_clicked, {
-    showModal(modalDialog(
-      title = input$name_clicked,
-      h5("Relationships in class"),
-      uiOutput("rels_list"),
-      h5("Training data distribution (2D)"),
-      uiOutput("choose_var1"),
-      uiOutput("choose_var2"),
-      plotOutput("varScatterplot")
-    ))
-  })
-
-
-  # SETINGS -----------------
-
-  class_df <- reactive({
-    data.frame(
-      class = names(trainingData()),
-      check = shinyInput(checkboxInput, length(trainingData()), "checkb")
-    )
-  })
-  output$class_tbl <- renderDT({
-    datatable(
-      class_df(),
-      rownames = FALSE,
-      escape = FALSE,
-      callback = JS(c(
-        "$('[id^=checkb]').on('click', function(){",
-        "  var id = this.getAttribute('id');",
-        "  var i = parseInt(/checkb(\\d+)/.exec(id)[1]);",
-        "  var value = $(this).prop('checked');",
-        "  var info = [{row: i, col: 3, value: value}];",
-        "  Shiny.setInputValue('dtable_cell_edit:DT.cellInfo', info);",
-        "})"))
-    )
-  })
+  inputBoxServer("input", data)
+  likelihoodBoxServer("likelihoodTable", data)
+  classBoxServer("classInfo", data)
 
 }
 
