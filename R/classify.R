@@ -19,18 +19,15 @@ prepareFeatures = function(lengthData, cutoff = 0) {
 # Helpers
 
 safe_max <- function(x, default = 0) {
-  val <- max(x)
-  if (length(x) == 0 || val == -Inf) default else val
+  if (length(x) == 0) default else max(x)
 }
 
 safe_min <- function(x, default = 0) {
-  val <- min(x)
-  if (length(x) == 0 || val == Inf) default else val
+  if (length(x) == 0) default else min(x)
 }
 
 safe_median <- function(x, default = 0) {
-  val <- median(x)
-  if(length(x) == 0 || is.na(val)) default else val
+  if(length(x) == 0) default else median(x)
 }
 
 safe_lengths <- function(lst) {
@@ -50,15 +47,15 @@ preparePdfs = function(lengthData, cutoff = 0, bw = "nrd0") {
   pdfs <- list(countPdf = lengths(lengthData) |>
                        density(from = 0, bw = bw) |> approxfun(rule = 2),
                      totalPdf = vapply(lengthData, sum, FUN.VALUE = 1) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2),
+                       density(from = 0, bw = bw) |> approxfun(rule = 2))
                      #lengthPdf = unlist(lengthData, use.names = FALSE) |>
                     #   density(from = 0) |> approxfun(rule = 2),
-                     medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2),
-                     longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2),
-                     shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2))
+                    # medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1) |>
+                     #  density(from = 0, bw = bw) |> approxfun(rule = 2),
+                     #longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
+                    #   density(from = 0, bw = bw) |> approxfun(rule = 2),
+                    # shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1) |>
+                     #  density(from = 0, bw = bw) |> approxfun(rule = 2))
 
   return (pdfs)
 
@@ -226,17 +223,13 @@ LOF <- function(obs, features, orderLst, top_n) {
 
 }
 
-distance <- function(obs, features, orderLst, top_n) {
+distance <- function(obs, features, orderLst) {
 
   order.idx <- match(names(orderLst), names(features))
 
-  features.full <- features
   features <- features[order.idx]
-  features <- features[1:top_n]
 
   res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
-
-  res = c(res, rep(NA, length(features.full)-top_n))
 
   res
 }
