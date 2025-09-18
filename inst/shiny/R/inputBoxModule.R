@@ -12,6 +12,9 @@ suppressPackageStartupMessages({
   library(gtExtras)
   library(shinyWidgets)
   library(pedtools)
+  library(shinyalert)
+  library(readr)
+  library(shinyjs)
 
 })
 
@@ -45,14 +48,6 @@ inputBoxUI <- function(id) {
 
     # Model controls
     h5("Model"),
-    pickerInput(inputId = NS(id, "classLevel"),
-                label = "Resolution",
-                choices = c("Sex-specific pedigree class" = "eqclass-detailed",
-                            "Pedigree class" = "eqclass",
-                            "Kappa" = "kappa",
-                            "Kinship" = "kinship",
-                            "Degree" = "degree"),
-                multiple = FALSE),
     pickerInput(inputId = NS(id, "clasSelection"),
                 label = "Classes",
                 choices = NULL,
@@ -65,16 +60,31 @@ inputBoxUI <- function(id) {
     numericInput(inputId = NS(id, "cutoff"),
                  label = "Cutoff",
                  value = 7, min = 0, step = 1),
-    actionBttn(inputId = NS(id, "load"),
-               label = "Load model"),
 
     # Input
     h5("Input"),
     tooltip(
       textAreaInput(inputId = NS(id, "segmentInput"),
-                    label = "segment lengths",
+                    label = "Segment lengths (cM)",
                     rows = 10),
       title = "Segment input"
+    ),
+
+    # Controls
+    h5("Results"),
+    materialSwitch(inputId = NS(id, "normalizeButton"), value = TRUE,
+                   label = "Normalize likelihoods?"),
+    materialSwitch(inputId = NS(id, "filterButton"), value = FALSE,
+                   label = "Filter outliers?"),
+
+    h5("Outlier detection"),
+    numericInput(
+      inputId = NS(id, "outlierThreshold"),
+      label = HTML("&#967;<sup>2</sup> quantile threshold"),
+      min = 0,
+      max = 1,
+      value = 0.95,
+      step = 0.01
     )
 
   )
@@ -84,17 +94,6 @@ inputBoxUI <- function(id) {
 inputBoxServer = function(id, data) {
   moduleServer(id, function(input, output, session) {
     observe({
-      if (input$classLevel == "eqclass-detailed") {
-        class.col = "eqclass.detailed"
-      } else if (input$classLevel == "eqclass") {
-        class.col = "eqclass"
-      } else if (input$classLevel == "kappa") {
-        class.col = "kappa"
-      } else if (input$classLevel == "kinship") {
-        class.col = "kinship"
-      } else if(input$classLevel == "degree") {
-        class.col = "degree"
-      }
 
       resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
       data[["resolutions"]] <- resolutions
@@ -103,20 +102,11 @@ inputBoxServer = function(id, data) {
         aggregateSegments(segmentData, metadata, x)
       }, simplify = FALSE)
 
-      metadata$class = metadata[[class.col]]
       data[["metadata"]] = metadata
 
-      data[["classes"]] = names(data[["segments"]])
-
-      updatePickerInput(session, "clasSelection",
-                        choices = data[["classes"]],
-                        selected = data[["classes"]])
-
-    })
-
-    observeEvent(input$load, {
-
-      #data[["segments"]] <- data[["segments"]][names(data[["segments"]]) %in% input$clasSelection]
+      #data[["classes"]] = lapply(data[["segments"]], function(x) {
+      #  names(x)
+      #})
 
       data[["features"]] <- lapply(data[["segments"]], function(x) {
         lapply(x, prepareFeatures, cutoff = input$cutoff)
@@ -125,29 +115,65 @@ inputBoxServer = function(id, data) {
       data[["pdfs"]] <- lapply(data[["segments"]], function(x) {
         lapply(x, preparePdfs, cutoff = input$cutoff)
       })
+
+
     })
 
+    observe({
+      req(data[["selectedTab"]])
+      data[["metadata"]]$class = data[["metadata"]][[data[["selectedTab"]]]]
+      data[["classes"]] = names(data[["segments"]][[data[["selectedTab"]]]])
+
+      updatePickerInput(session, "clasSelection",
+                        choices = data[["classes"]],
+                        selected = data[["classes"]])
+    })
+
+
+
     observeEvent(input$segmentInput, {
+
       obs = as.numeric(input$segmentInput |>
                          strsplit("\n") |>
                          unlist())
       obs = obs[obs > input$cutoff]
       data[["obs"]] = obs
+
+      data[["mdists"]] = lapply(data[["features"]], function(x) {
+        distance(data[["obs"]], x)
+      })
     })
 
-    observeEvent(input$segmentInput, {
-      req(data[["obs"]], data[["pdfs"]])
+    observeEvent(input$filterButton, {
 
       data[["likelihoods"]][["raw"]] = lapply(data[["pdfs"]], function(x) {
         classify(data[["obs"]], x, cutoff = input$cutoff, sort = TRUE)
       })
       data[["likelihoods"]][["norm"]] = lapply(data[["likelihoods"]][["raw"]],
-                                              ibdrel::normalizePosteriors)
+                                               ibdrel::normalizeLikelihoods)
+
+      if (input$filterButton) {
+        data[["likelihoods"]][["raw"]] = Map(
+          function(x, mdists) {
+            mdists.ordered <- mdists[names(x)]
+            x[mdists.ordered <= data[["mdistthreshold"]]]
+          },
+          data[["likelihoods"]][["raw"]], data[["mdists"]]
+        )
+
+        data[["likelihoods"]][["norm"]] = lapply(data[["likelihoods"]][["raw"]],
+                                                 ibdrel::normalizeLikelihoods)
+
+      }
     })
 
+    # Controls
     observe({
-      #data[["mdists"]] = distance(data[["obs"]], data[["features"]], orderLst = data[["likelihoods"]])
+      data[["normalize"]] = input$normalizeButton
+      data[["mdistthreshold"]] = qchisq(p = input$outlierThreshold,
+                                        df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
     })
+
 
   })
 
