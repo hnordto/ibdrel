@@ -124,8 +124,8 @@ classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
   }
 }
 
-normalizePosteriors = function(posteriors) {
-  exp(posteriors - matrixStats::logSumExp(posteriors))
+normalizeLikelihoods = function(likelihoods) {
+  exp(likelihoods - matrixStats::logSumExp(likelihoods))
 }
 
 # Goodness-of-fit --------------------------
@@ -165,7 +165,7 @@ computeMahalanobis <- function(features, obs) {
 
   covmat <- computeCovariance(features)
 
-  if (all(covmat) == 0) { # If PO, covariance is 0 (no variation, always 50% IBD)
+  if (all(covmat == 0)) { # If PO, covariance is 0 (no variation, always 50% IBD)
     return (NA)
   }
 
@@ -223,11 +223,11 @@ LOF <- function(obs, features, orderLst, top_n) {
 
 }
 
-distance <- function(obs, features, orderLst) {
+distance <- function(obs, features) {
 
-  order.idx <- match(names(orderLst), names(features))
+  #order.idx <- match(names(orderLst), names(features))
 
-  features <- features[order.idx]
+  #features <- features[order.idx]
 
   res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
 
