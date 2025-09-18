@@ -608,8 +608,9 @@ groupDonnelly = function(pedlist, annotation) {
 
 #' Translate a relationship class code on standardized ibdrel format to readable relationships
 #'
-classTranslator <- function(class, dictionary = NULL) {
-  if (is.null(dictionary)) {
+classTranslator <- function(class, resolution) {
+
+  if (resolution == "eqclass.detailed" || resolution == "eqclass") {
     dictionary <- list("L" = "Linear",
                        "fA" = "Full avuncular",
                        "hA" = "Half avuncular",
@@ -619,23 +620,42 @@ classTranslator <- function(class, dictionary = NULL) {
                        "hS" = "Half siblings",
                        "m" = "maternal",
                        "p" = "paternal")
-  }
 
-  class.split <- strsplit(class, "-")[[1]]
-  reltype = class.split[1]
-  degree = class.split[2]
+    class.split <- strsplit(class, "-")[[1]]
+    reltype = class.split[1]
+    degree = class.split[2]
 
-  if (!is.na(class.split[3])) {
-    sexpath = class.split[3]
+    if (!is.na(class.split[3])) {
+      sexpath = class.split[3]
 
-    sexpath.split = strsplit(sexpath, "")[[1]]
-    sexpath.expanded = dictionary[sexpath.split]
-    sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
+      sexpath.split = strsplit(sexpath, "")[[1]]
+      sexpath.expanded = dictionary[sexpath.split]
+      sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
+    } else {
+      sexpath.write = ""
+    }
+
+    rel.write <- paste(dictionary[reltype], "of degree", degree, sexpath.write)
+  } else if (resolution == "kappa") {
+    class.split <- as.numeric(strsplit(class, "-")[[1]])
+    kappa0 = as.character(MASS::fractions(class.split[1]))
+    kappa1 = as.character(MASS::fractions(class.split[2]))
+    kappa2 = as.character(MASS::fractions(class.split[3]))
+
+    rel.write <- paste("\u03BA\u2080 =", kappa0, ",",
+                       "\u03BA\u2081 =", kappa1, ",",
+                       "\u03BA\u2082 =", kappa2)
+  } else if (resolution == "kinship") {
+    rel.write <- paste("\u03C6 =", as.character(MASS::fractions(as.numeric(class))))
+  } else if (resolution == "degree") {
+    rel.write <- paste("Degree", class)
   } else {
-    sexpath.write = ""
+    warning("Unknown classification resolution.")
+    rel.write <- NULL
   }
 
-  rel.write <- paste(dictionary[reltype], "of degree", degree, sexpath.write)
+
+
 
   return(rel.write)
 }
