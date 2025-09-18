@@ -1,0 +1,24 @@
+
+
+
+<p>Based on inputted IBD data, the likelihood is computed as <span class="math inline">\(\text{Pr}(\text{IBD data}|\text{Class})\)</span>.
+In other words, the likelihood is the estimated probability of the
+observed IBD sharing given the classes. Higher values indicates that the
+observed data is more likely under the specified class compared to
+classes with lower values.</p>
+<p>The un-normalized likelihood is defined as <span class="math inline">\(\log \{  \text{Pr}(\text{IBD data}|\text{Class})
+\}\)</span>. This is a measurement independent of the number of classes,
+and express the likelihood (on the log-scale) for a single class. The
+value is proportional to <span class="math inline">\(\text{Pr}(\text{Class}|\text{IBD data})\)</span>,
+and is thus a measurement of how likely a class is given the observed
+data under the modeling assumptions (see “statistical foundation”).</p>
+<p>The normalized likelihood is computed by scaling all likelihoods
+(over all classes) so that they sum to one. This creates a discrete
+probability distribution over all classes, quantifying the probabilities
+of the classes given the observed data. Each value is also a quantity
+informative about <span class="math inline">\(\text{Pr}(\text{Class}|\text{IBD data})\)</span>,
+but scaled to the finite number of classes present in the model. Under
+default model conditions, the normalized likelihoods over all classes is
+the exact discrete posterior probability distribution of classes given
+the IBD data (see “statistical foundations: special case”). Same model
+assumptions as for the un-normalized likelihoods apply.</p>
