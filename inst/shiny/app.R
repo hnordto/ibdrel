@@ -20,6 +20,10 @@ ui = dashboardPage(
   # Body
 
   body = dashboardBody(
+
+    useShinyjs(),
+    useBusyIndicators(),
+
     tags$head(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
@@ -43,19 +47,8 @@ ui = dashboardPage(
         width = 5,
         classBoxUI("classInfo")
       )
-
-
-
-
-
-
     )
-
-
-
   )
-
-
 )
 
 server <- function(input, output, session) {
