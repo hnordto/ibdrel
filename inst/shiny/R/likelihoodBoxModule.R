@@ -1,14 +1,41 @@
+helpWidget = function(id) {
+  tooltip(
+    actionBttn(
+      inputId = NS(id, "help"),
+      label = NULL,
+      icon = icon("question")
+    ),
+    title = "See help on this panel."
+  )
+}
+
+checkInput = function(data) {
+  if (is.null(data)) {
+    validate(need(FALSE, "Waiting for input."))
+  }
+  data
+}
+
 likelihoodBoxUI = function(id) {
+
 
   tabBox(
     id = NS(id, "resTabs"),
     width = NULL,
-    selected = "Sex-specific pedigree class",
+    selected = "eqclass.detailed",
 
-    title = "Result table",
+    title = div(
+      div(
+        "Result table",
+      ),
+      div(
+        helpWidget(id)
+      )
+    ),
 
     tabPanel(
       title = "Sex-specific pedigree class",
+      value = "eqclass.detailed",
       div(
         class = "table-box",
         gt::gt_output(NS(id, "resTableDetailedEq"))
@@ -17,6 +44,7 @@ likelihoodBoxUI = function(id) {
 
     tabPanel(
       title = "Pedigree class",
+      value = "eqclass",
       div(
         class = "table-box",
         gt::gt_output(NS(id, "resTableEq"))
@@ -25,6 +53,7 @@ likelihoodBoxUI = function(id) {
 
     tabPanel(
       title = "Kappa coefficients",
+      value = "kappa",
       div(
         class = "table-box",
         gt::gt_output(NS(id, "resTableKappa"))
@@ -33,6 +62,7 @@ likelihoodBoxUI = function(id) {
 
     tabPanel(
       title = "Kinship coefficient",
+      value = "kinship",
       div(
         class = "table-box",
         gt::gt_output(NS(id, "resTableKinship"))
@@ -41,74 +71,110 @@ likelihoodBoxUI = function(id) {
 
     tabPanel(
       title = "Degree",
+      value = "degree",
       div(
         class = "table-box",
         gt::gt_output(NS(id, "resTableDegree"))
       )
-    ),
-
-    materialSwitch(inputId = NS(id, "normalizeButton"), value = TRUE,
-                   label = "Normalize likelihoods?"),
-    materialSwitch(inputId = NS(id, "filterButton"), value = FALSE,
-                   label = "Filter outliers?")
+    )
   )
 }
 
 likelihoodBoxServer = function(id, data) {
   moduleServer(id, function(input, output, session) {
 
+    # Set active tab
+    observe({
+      req(input$resTabs)
+      data[["selectedTab"]] <- input$resTabs
+    })
+
     output$resTableDetailedEq = gt::render_gt({
-      input = if (input$normalizeButton) {
-        data[["likelihoods"]][["norm"]][["eqclass.detailed"]]
+
+      likelihoods <- checkInput(data[["likelihoods"]])
+
+      input = if (data[["normalize"]]) {
+        likelihoods[["norm"]][["eqclass.detailed"]]
       } else {
-        data[["likelihoods"]][["raw"]][["eqclass.detailed"]]
+        likelihoods[["raw"]][["eqclass.detailed"]]
       }
 
-      likelihoodTable(names(input), input)
+      names.input = sapply(names(input), ibdrel::classTranslator, "eqclass.detailed")
+
+      likelihoodTable(names.input, input)
     })
 
     output$resTableEq = gt::render_gt({
-      input = if (input$normalizeButton) {
-        data[["likelihoods"]][["norm"]][["eqclass"]]
+
+      likelihoods <- checkInput(data[["likelihoods"]])
+
+      input = if (data[["normalize"]]) {
+       likelihoods[["norm"]][["eqclass"]]
       } else {
-        data[["likelihoods"]][["raw"]][["eqclass"]]
+        likelihoods[["raw"]][["eqclass"]]
       }
 
-      likelihoodTable(names(input), input)
+      names.input = sapply(names(input), ibdrel::classTranslator, "eqclass")
+
+      likelihoodTable(names.input, input)
     })
 
     output$resTableKappa = gt::render_gt({
-      input = if (input$normalizeButton) {
-        data[["likelihoods"]][["norm"]][["kappa"]]
+
+      likelihoods <- checkInput(data[["likelihoods"]])
+
+      input = if (data[["normalize"]]) {
+        likelihoods[["norm"]][["kappa"]]
       } else {
-        data[["likelihoods"]][["raw"]][["kappa"]]
+        likelihoods[["raw"]][["kappa"]]
       }
 
-      likelihoodTable(names(input), input)
+      names.input = sapply(names(input), ibdrel::classTranslator, "kappa")
+
+      likelihoodTable(names.input, input)
     })
 
     output$resTableKinship = gt::render_gt({
-      input = if (input$normalizeButton) {
-        data[["likelihoods"]][["norm"]][["kinship"]]
+
+      likelihoods <- checkInput(data[["likelihoods"]])
+
+      input = if (data[["normalize"]]) {
+        likelihoods[["norm"]][["kinship"]]
       } else {
-        data[["likelihoods"]][["raw"]][["kinship"]]
+        likelihoods[["raw"]][["kinship"]]
       }
 
-      likelihoodTable(names(input), input)
+      names.input = sapply(names(input), ibdrel::classTranslator, "kinship")
+
+      likelihoodTable(names.input, input)
     })
 
     output$resTableDegree = gt::render_gt({
-      input = if (input$normalizeButton) {
-        data[["likelihoods"]][["norm"]][["degree"]]
+
+      likelihoods <- checkInput(data[["likelihoods"]])
+
+      input = if (data[["normalize"]]) {
+        likelihoods[["norm"]][["degree"]]
       } else {
-        data[["likelihoods"]][["raw"]][["degree"]]
+        likelihoods[["raw"]][["degree"]]
       }
 
-      likelihoodTable(names(input), input)
+      names.input = sapply(names(input), ibdrel::classTranslator, "degree")
+
+      likelihoodTable(names.input, input)
     })
 
 
-
+    # Help
+    observeEvent(input$help, {
+      shinyalert(
+        className = "helpbox",
+        html = TRUE,
+        text = read_file("help/likelihoodBox.html"),
+        showConfirmButton = FALSE,
+        closeOnClickOutside = TRUE
+      )
+    })
 
   })
 }
