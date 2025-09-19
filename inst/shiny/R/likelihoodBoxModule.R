@@ -9,11 +9,10 @@ helpWidget = function(id) {
   )
 }
 
-checkInput = function(data) {
-  if (is.null(data)) {
-    validate(need(FALSE, "Waiting for input."))
+checkLikelihood = function(likelihood) {
+  if (all(likelihood == -Inf)) {
+    validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length >= cutoff."))
   }
-  data
 }
 
 likelihoodBoxUI = function(id) {
@@ -23,6 +22,7 @@ likelihoodBoxUI = function(id) {
     id = NS(id, "resTabs"),
     width = NULL,
     selected = "eqclass.detailed",
+    collapsible = FALSE,
 
     title = div(
       div(
@@ -90,78 +90,33 @@ likelihoodBoxServer = function(id, data) {
     })
 
     output$resTableDetailedEq = gt::render_gt({
-
-      likelihoods <- checkInput(data[["likelihoods"]])
-
-      input = if (data[["normalize"]]) {
-        likelihoods[["norm"]][["eqclass.detailed"]]
-      } else {
-        likelihoods[["raw"]][["eqclass.detailed"]]
-      }
-
-      names.input = sapply(names(input), ibdrel::classTranslator, "eqclass.detailed")
-
-      likelihoodTable(names.input, input)
+      res <- "eqclass.detailed"
+      checkLikelihood(data[["likelihoods"]][[res]])
+      likelihoodTable(data, res)
     })
 
     output$resTableEq = gt::render_gt({
-
-      likelihoods <- checkInput(data[["likelihoods"]])
-
-      input = if (data[["normalize"]]) {
-       likelihoods[["norm"]][["eqclass"]]
-      } else {
-        likelihoods[["raw"]][["eqclass"]]
-      }
-
-      names.input = sapply(names(input), ibdrel::classTranslator, "eqclass")
-
-      likelihoodTable(names.input, input)
+      res <- "eqclass"
+      checkLikelihood(data[["likelihoods"]][[res]])
+      likelihoodTable(data, res)
     })
 
     output$resTableKappa = gt::render_gt({
-
-      likelihoods <- checkInput(data[["likelihoods"]])
-
-      input = if (data[["normalize"]]) {
-        likelihoods[["norm"]][["kappa"]]
-      } else {
-        likelihoods[["raw"]][["kappa"]]
-      }
-
-      names.input = sapply(names(input), ibdrel::classTranslator, "kappa")
-
-      likelihoodTable(names.input, input)
+      res <- "kappa"
+      checkLikelihood(data[["likelihoods"]][[res]])
+      likelihoodTable(data, res)
     })
 
     output$resTableKinship = gt::render_gt({
-
-      likelihoods <- checkInput(data[["likelihoods"]])
-
-      input = if (data[["normalize"]]) {
-        likelihoods[["norm"]][["kinship"]]
-      } else {
-        likelihoods[["raw"]][["kinship"]]
-      }
-
-      names.input = sapply(names(input), ibdrel::classTranslator, "kinship")
-
-      likelihoodTable(names.input, input)
+      res <- "kinship"
+      checkLikelihood(data[["likelihoods"]][[res]])
+      likelihoodTable(data, res)
     })
 
     output$resTableDegree = gt::render_gt({
-
-      likelihoods <- checkInput(data[["likelihoods"]])
-
-      input = if (data[["normalize"]]) {
-        likelihoods[["norm"]][["degree"]]
-      } else {
-        likelihoods[["raw"]][["degree"]]
-      }
-
-      names.input = sapply(names(input), ibdrel::classTranslator, "degree")
-
-      likelihoodTable(names.input, input)
+      res <- "degree"
+      checkLikelihood(data[["likelihoods"]][[res]])
+      likelihoodTable(data, res)
     })
 
 
@@ -181,10 +136,31 @@ likelihoodBoxServer = function(id, data) {
 
 # Format table
 
-likelihoodTable <- function(rels, likelihoods) {
-  df <- data.frame(Relationship = rels,
+likelihoodTable <- function(data, resolution) {
+
+  likelihoods = data[["likelihoods"]][[resolution]] # XX FIX XX
+  mdists = data[["mdists"]][[resolution]]
+  filter = data[["filter"]]
+  normalize = data[["normalize"]]
+  threshold = data[["mdistthreshold"]]
+
+
+  if (filter) {
+    inlier.classes <- names(which(mdists < threshold))
+    likelihoods <- likelihoods[inlier.classes]
+  }
+
+  if (normalize) {
+    likelihoods = ibdrel::normalizeLikelihoods(likelihoods)
+  }
+
+  likelihoods <- sort(likelihoods, decreasing = TRUE)
+  classlabels <- sapply(names(likelihoods), ibdrel::classTranslator, resolution)
+
+
+  df <- data.frame(Relationship = classlabels,
                    Likelihood = round(likelihoods, 2))
   df <- gt(df) |>
-    gt_theme_538()
+    gt_theme_538(quiet = TRUE)
   return (df)
 }
