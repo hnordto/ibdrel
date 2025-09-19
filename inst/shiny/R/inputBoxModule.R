@@ -23,7 +23,7 @@ segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package 
 pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
 metadata = ibdrel::pedsMetadata(pedsDataRel)
 
-
+supported.features <- c("count", "total", "median", "longest", "shortest")
 
 
 
@@ -48,9 +48,10 @@ inputBoxUI <- function(id) {
 
     # Model controls
     h5("Model"),
-    pickerInput(inputId = NS(id, "clasSelection"),
-                label = "Classes",
-                choices = NULL,
+    pickerInput(inputId = NS(id, "featureSelection"),
+                label = "Features",
+                choices = supported.features,
+                selected = c("count", "total"),
                 options = pickerOptions(
                   actionsBox = TRUE,
                   size = 10,
@@ -103,17 +104,16 @@ inputBoxServer = function(id, data) {
       }, simplify = FALSE)
 
       data[["metadata"]] = metadata
+      data[["peds"]] = pedsDataRel
 
-      #data[["classes"]] = lapply(data[["segments"]], function(x) {
-      #  names(x)
-      #})
+      data[["features"]] <- input$featureSelection
 
       data[["features"]] <- lapply(data[["segments"]], function(x) {
-        lapply(x, prepareFeatures, cutoff = input$cutoff)
+        lapply(x, prepareFeatures, featureSel = input$featureSelection, cutoff = input$cutoff)
       })
 
       data[["pdfs"]] <- lapply(data[["segments"]], function(x) {
-        lapply(x, preparePdfs, cutoff = input$cutoff)
+        lapply(x, preparePdfs, featureSel = input$featureSelection, cutoff = input$cutoff)
       })
 
 
@@ -123,10 +123,6 @@ inputBoxServer = function(id, data) {
       req(data[["selectedTab"]])
       data[["metadata"]]$class = data[["metadata"]][[data[["selectedTab"]]]]
       data[["classes"]] = names(data[["segments"]][[data[["selectedTab"]]]])
-
-      updatePickerInput(session, "clasSelection",
-                        choices = data[["classes"]],
-                        selected = data[["classes"]])
     })
 
 
@@ -136,42 +132,29 @@ inputBoxServer = function(id, data) {
       obs = as.numeric(input$segmentInput |>
                          strsplit("\n") |>
                          unlist())
-      obs = obs[obs > input$cutoff]
+      obs = obs[obs >= input$cutoff]
       data[["obs"]] = obs
 
       data[["mdists"]] = lapply(data[["features"]], function(x) {
-        distance(data[["obs"]], x)
+        distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection)
       })
     })
 
-    observeEvent(input$filterButton, {
-
-      data[["likelihoods"]][["raw"]] = lapply(data[["pdfs"]], function(x) {
-        classify(data[["obs"]], x, cutoff = input$cutoff, sort = TRUE)
+    observe({
+      data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
+        classify(data[["obs"]], x, cutoff = input$cutoff, sort = FALSE) #!!!
       })
-      data[["likelihoods"]][["norm"]] = lapply(data[["likelihoods"]][["raw"]],
-                                               ibdrel::normalizeLikelihoods)
-
-      if (input$filterButton) {
-        data[["likelihoods"]][["raw"]] = Map(
-          function(x, mdists) {
-            mdists.ordered <- mdists[names(x)]
-            x[mdists.ordered <= data[["mdistthreshold"]]]
-          },
-          data[["likelihoods"]][["raw"]], data[["mdists"]]
-        )
-
-        data[["likelihoods"]][["norm"]] = lapply(data[["likelihoods"]][["raw"]],
-                                                 ibdrel::normalizeLikelihoods)
-
-      }
     })
+
 
     # Controls
     observe({
       data[["normalize"]] = input$normalizeButton
+      data[["chisq"]] = input$outlierThreshold
       data[["mdistthreshold"]] = qchisq(p = input$outlierThreshold,
-                                        df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
+                                       df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
+      data[["filter"]] = ifelse(input$filterButton, TRUE, FALSE)
+      data[["cutoff"]] = input$cutoff
     })
 
 
