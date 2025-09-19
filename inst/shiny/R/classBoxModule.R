@@ -1,8 +1,13 @@
-checkInput = function(data) {
-  if (is.null(data)) {
-    validate(need(FALSE, "Waiting for input."))
+checkLikelihood = function(likelihood) {
+  if (all(likelihood == -Inf)) {
+    validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length >= cutoff."))
   }
-  data
+}
+
+checkObs = function(obs) {
+  if(identical(obs, numeric(0))) {
+    validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length >= cutoff."))
+  }
 }
 
 classBoxUI = function(id) {
@@ -11,6 +16,7 @@ classBoxUI = function(id) {
     id = NS(id, "classTabs"),
     width = NULL,
     selected = "Summary",
+    collapsible = FALSE,
 
     title = div(
       pickerInput(inputId = NS(id, "selectClass"), label = "Class:", choices = NULL)
@@ -29,10 +35,11 @@ classBoxUI = function(id) {
     tabPanel(
       title = "Pedigrees",
       div(
-        class = "table-box",
+        class = "table-box-null",
         gt_output(NS(id, "relationshipTable"))
       ),
-      selectInput(NS(id, "selectPedigree"), "Pedigree:", choices = NULL)
+      pickerInput(NS(id, "selectPedigree"), "Pedigree:", choices = NULL),
+      plotOutput(NS(id, "pedPlot"))
     )
 
   )
@@ -48,73 +55,106 @@ classBoxServer = function(id, data) {
     #})
 
     observe({
-      updatePickerInput(session, "selectClass", choices = data[["classes"]])
-      #data[["selectedClass"]] = input$selectClass
+
+      res = data[["selectedTab"]]
+      likelihoods = data[["likelihoods"]][[res]]
+
+      # If not input, no ordering
+      if (!is.null(names(likelihoods))) {
+        classes <- names(sort(likelihoods, decreasing = TRUE))
+      } else {
+        classes <- data[["classes"]]
+      }
+
+      if(length(classes) == 0) return() # Escape if classes is not loaded yet (Shiny timing issue)
+
+      classes.labels <- sapply(classes, ibdrel::classTranslator, res)
+      updatePickerInput(session, "selectClass",
+                        choices = stats::setNames(classes, classes.labels))
+
+    })
+
+    observeEvent(input$selectClass, {
+      peds = subset(data[["metadata"]], class == input$selectClass)[["rel"]]
+      updatePickerInput(session, "selectPedigree", choices = peds)
     })
 
     output$classInfo <- renderUI({
       req(input$selectClass)
 
-      likelihoods <- checkInput(data[["likelihoods"]])
+      checkLikelihood(data[["likelihoods"]][[data[["selectedTab"]]]])
 
-      makeSummaryOutput(data[["metadata"]],
-                        likelihoods,
-                        input$selectClass,
-                        resolution = data[["selectedTab"]])
+      makeSummaryOutput(data, data[["selectedTab"]], input$selectClass)
     })
 
 
     output$outlierInfo <- renderUI({
+      req(input$selectClass)
 
-      mdists <- checkInput(data[["mdists"]])
+      checkObs(data[["obs"]])
 
-      makeOutlierOutput(mdists,
-                        input$selectClass,
-                        data[["selectedTab"]],
-                        data[["mdistthreshold"]])
+      makeOutlierOutput(data, data[["selectedTab"]], input$selectClass)
     })
 
     output$relationshipTable = render_gt({
-      relationshipTable(data[["metadata"]], input$selectClass)
+      req(input$selectClass)
+      relationshipTable(data, input$selectClass)
     })
 
     output$jointDistPlot = renderPlot({
+      req(input$selectClass)
 
       resolution = data[["selectedTab"]]
 
-      if (!is.null(data[["obs"]])) {
-        jointDistPlot(train.features = data[["features"]][[resolution]][[input$selectClass]],
-                      class = input$selectClass,
-                      obs.features = ibdrel::obsToFeatures(data[["obs"]]))
-      } else {
-        jointDistPlot(train.features = data[["features"]][[resolution]][[input$selectClass]],
-                      class = input$selectClass,
-                      obs.features = NULL)
-      }
+      jointDistPlot(data, resolution, input$selectClass)
+    })
+
+    output$pedPlot <- renderPlot({
+      req(input$selectPedigree)
+
+      ped = data[["peds"]][[input$selectPedigree]]
+      ped.leaves = ibdrel::identifyLeaves(ped)
+      ped = ped |> pedtools::setSex(leaves, sex= 0)
+
+      plot(ped, autoScale = TRUE, hatched = ped.leaves, fill = list(red = ped.leaves))
+
     })
 
 
   })
 }
 
-makeSummaryOutput <- function(metadata, likelihoods, selected.class, resolution) {
+makeSummaryOutput <- function(data, resolution, selected.class) {
 
+  metadata = data[["metadata"]]
   met = subset(metadata, class == selected.class)
+
+  likelihoods = data[["likelihoods"]][[resolution]]
+  likelihoods.sorted = sort(likelihoods, decreasing = TRUE)
+
+  likelihood = likelihoods[[selected.class]]
+  rank = which(names(likelihoods.sorted) == selected.class)
+  npeds = length(met[["code"]])
+
+
 
   tagList(
     tags$p(
       tags$b("Selected class:"), tags$i(ibdrel::classTranslator(selected.class, resolution)), "\n",
       tags$ul(
-        tags$li(tags$b("Log-likelihood:"), likelihoods[["raw"]][[resolution]][[selected.class]]),
-        tags$li(tags$b("Normalized likelihood:"), likelihoods[["norm"]][[resolution]][[selected.class]]),
-        tags$li(tags$b("Rank:"), which(names(likelihoods[["raw"]][[resolution]]) == selected.class)),
-        tags$li(tags$b("Number of pedigrees in class:"), length(met[["code"]]))
+        tags$li(tags$b("Log-likelihood:"), round(likelihood, 3)),
+        #tags$li(tags$b("Normalized likelihood:"), likelihoods[["norm"]][[resolution]][[selected.class]]),
+        tags$li(tags$b("Rank:"), rank),
+        tags$li(tags$b("Number of pedigrees in class:"), npeds)
       )
     )
   )
 }
 
-makeOutlierOutput <- function(mdists, selected.class, resolution, threshold) {
+makeOutlierOutput <- function(data, resolution, selected.class) {
+
+  mdists = data[["mdists"]]
+  threshold = data[["mdistthreshold"]]
 
   mdist.idx = which(names(mdists[[resolution]]) == selected.class)
   mdist = mdists[[resolution]][mdist.idx]
@@ -123,14 +163,18 @@ makeOutlierOutput <- function(mdists, selected.class, resolution, threshold) {
     tags$p(
       tags$b("Is observation an outlier?"), ifelse(mdist <= threshold, "No", "Yes"), "\n",
       tags$ul(
-        tags$li(tags$b("Mahalanobis distance:"), mdist),
-        tags$li(tags$b("Threshold:"), threshold)
+        tags$li(tags$b("Mahalanobis distance:"), round(mdist, 3)),
+        tags$li(tags$b("Threshold:"), round(threshold, 3))
       )
     )
   )
 }
 
-relationshipTable <- function(metadata, selected.class) {
+relationshipTable <- function(data, selected.class) {
+
+  metadata <- data[["metadata"]]
+
+
   df <- subset(metadata, class == selected.class)
   df <- df[,c("code", "kappa0", "kappa1", "kappa2", "kinship")]
   df$kappa0 <- as.character(MASS::fractions(df$kappa0))
@@ -138,7 +182,7 @@ relationshipTable <- function(metadata, selected.class) {
   df$kappa2 <- as.character(MASS::fractions(df$kappa2))
   df$kinship <- as.character(MASS::fractions(df$kinship))
   df <- gt(df) |>
-    gt_theme_538() #|>
+    gt_theme_538(quiet = TRUE) #|>
     #cols_label(
     #  kappa0 = html("&kappa;<sub>0</sub>"),
     #  kappa1 = html("&kappa;<sub>1</sub>"),
@@ -149,30 +193,39 @@ relationshipTable <- function(metadata, selected.class) {
 }
 
 
-jointDistPlot <- function(train.features,
-                          class,
-                          obs.features = NULL) {
-  count = train.features[["countPdf"]]
-  total = train.features[["totalPdf"]]
+jointDistPlot <- function(data, resolution, selected.class) {
 
-  data = data.frame(count, total)
+  segments = data[["features"]][[resolution]][[selected.class]]
+
+  count = segments[["count"]]
+  total = segments[["total"]]
+
+  obs = data[["obs"]]
+
+  if (!identical(obs, numeric(0))) {
+    obs.features = ibdrel::obsToFeatures(obs, data[["cutoff"]], c("count", "total"))
+  } else {
+    obs.features = NULL
+  }
+  df = data.frame(count, total)
 
   p <- ggplot2::ggplot() +
-    geom_jitter(data = data, mapping = aes(x = count, y = total), alpha = .5) +
-    #stat_ellipse(data = data, mapping = aes(x = count, y = total, size = 1.1), alpha = .75) +
+    geom_jitter(data = df, mapping = aes(x = count, y = total), alpha = .5) +
+    stat_ellipse(data = df, mapping = aes(x = count, y = total), type = "norm", alpha = .75,
+                 level = data[["chisq"]]) + # Chisq when type = "norm"
     labs(x = "Number of segments",
          y = "Total IBD segment length (cM)") +
     theme_bw()
 
   if (!is.null(obs.features)) {
-    count.obs = obs.features$obs[["countPdf"]]
-    total.obs = obs.features$obs[["totalPdf"]]
+    count.obs = obs.features$obs[["count"]]
+    total.obs = obs.features$obs[["total"]]
 
-    data.obs = data.frame(count = count.obs, total = total.obs)
+    df.obs = data.frame(count = count.obs, total = total.obs)
 
     p <- p +
-      geom_point(data = data.obs, mapping = aes(x = count, y = total), alpha = .5,
-                  shape = 3, stroke = 2, size = 4, colour = "red2")
+      geom_point(data = df.obs, mapping = aes(x = count, y = total),
+                  shape = 4, stroke = 2, size = 4, colour = "red2")
   }
 
   return (p)
