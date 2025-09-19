@@ -1,16 +1,17 @@
-prepareFeatures = function(lengthData, cutoff = 0) {
+prepareFeatures = function(lengthData, featureSel = c("count", "total"), cutoff = 0) {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
 
-  # Remove empty lists (simulations with no segments > cutoff)
-  #lengthData <- lengthData[lapply(lengthData, length) > 0]
+  features <- list(
+    count = if ("count" %in% featureSel) lengths(lengthData) else NULL,
+    total = if ("total" %in% featureSel) vapply(lengthData, sum, FUN.VALUE = 1) else NULL,
+    median = if ("median" %in% featureSel) vapply(lengthData, safe_median, FUN.VALUE = 1),
+    longest = if ("longest" %in% featureSel) vapply(lengthData, safe_max, FUN.VALUE = 1) else NULL,
+    shortest = if ("shortest" %in% featureSel) vapply(lengthData, safe_min, FUN.VALUE = 1) else NULL
+  )
 
-  features <- list(countPdf = lengths(lengthData),
-                   totalPdf = vapply(lengthData, sum, FUN.VALUE = 1))
-                   #medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1),
-                   #longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1),
-                   #shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1))
+  features <- Filter(Negate(is.null), features) # Remove NULL (not used features)
 
   return (features)
 
@@ -36,26 +37,25 @@ safe_lengths <- function(lst) {
   })
 }
 
-preparePdfs = function(lengthData, cutoff = 0, bw = "nrd0") {
+preparePdfs = function(lengthData, featureSel = c("count", "total"), cutoff = 0, bw = "nrd0") {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
   }
 
-  # Remove empty lists (simulations with no segments > cutoff)
-  #lengthData <- lengthData[lapply(lengthData, length) > 0]
+  pdfs <- list(
+    count = if ("count" %in% featureSel) lengths(lengthData) |>
+      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
+    total = if ("total" %in% featureSel) vapply(lengthData, sum, FUN.VALUE = 1) |>
+      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
+    median = if ("median" %in% featureSel) vapply(lengthData, safe_median, FUN.VALUE = 1) |>
+      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
+    longest = if ("longest" %in% featureSel) longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
+      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
+    shortest = if ("shortest" %in% featureSel) vapply(lengthData, safe_min, FUN.VALUE = 1) |>
+      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL
+  )
 
-  pdfs <- list(countPdf = lengths(lengthData) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2),
-                     totalPdf = vapply(lengthData, sum, FUN.VALUE = 1) |>
-                       density(from = 0, bw = bw) |> approxfun(rule = 2))
-                     #lengthPdf = unlist(lengthData, use.names = FALSE) |>
-                    #   density(from = 0) |> approxfun(rule = 2),
-                    # medianPdf = vapply(lengthData, safe_median, FUN.VALUE = 1) |>
-                     #  density(from = 0, bw = bw) |> approxfun(rule = 2),
-                     #longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
-                    #   density(from = 0, bw = bw) |> approxfun(rule = 2),
-                    # shortestPdf = vapply(lengthData, safe_min, FUN.VALUE = 1) |>
-                     #  density(from = 0, bw = bw) |> approxfun(rule = 2))
+  pdfs <- Filter(Negate(is.null), pdfs)
 
   return (pdfs)
 
@@ -67,28 +67,24 @@ classProb = function(obs, pdfs, log = T) {
 
   probs = c()
 
-  if ("countPdf" %in% var.names) {
-    probs = c(probs, pdfs$countPdf(length(obs)))
+  if ("count" %in% var.names) {
+    probs = c(probs, pdfs$count(length(obs)))
   }
 
-  if ("totalPdf" %in% var.names) {
-    probs = c(probs, pdfs$totalPdf(sum(obs)))
+  if ("total" %in% var.names) {
+    probs = c(probs, pdfs$total(sum(obs)))
   }
 
-  if ("lengthPdf" %in% var.names) {
-    probs = c(probs, pdfs$lengthPdf(obs))
+  if ("median" %in% var.names) {
+    probs = c(probs, pdfs$median(safe_median(obs)))
   }
 
-  if ("medianPdf" %in% var.names) {
-    probs = c(probs, pdfs$medianPdf(median(obs)))
+  if ("longest" %in% var.names) {
+    probs = c(probs, pdfs$longest(safe_max(obs)))
   }
 
-  if ("longestPdf" %in% var.names) {
-    probs = c(probs, pdfs$longestPdf(max(obs)))
-  }
-
-  if ("shortestPdf" %in% var.names) {
-    probs = c(probs, pdfs$shortestPdf(min(obs)))
+  if ("shortest" %in% var.names) {
+    probs = c(probs, pdfs$shortest(safe_min(obs)))
   }
 
 #  p0 = pdfs$countPdf(length(obs))
@@ -116,7 +112,7 @@ normalizeClassProbs = function(logprobs) {
 classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
   obs = obs[obs >= cutoff]
 
-  if (identical(obs, numeric(0))) {
+  if (identical(obs, numeric(0)) || is.null(obs)) {
     logprobs = rep(-Inf, length(pdfuns)) # Likelihood = 0 for all classes if obs < cutoff
   } else {
     logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
@@ -143,19 +139,19 @@ computeCovariance <- function(features) {
   cov(as.data.frame(features), use = "pairwise.complete.obs")
 }
 
-obsToFeatures <- function(obs) {
+obsToFeatures <- function(obs, cutoff, featureSel) {
   obs.lst = list()
   obs.lst$obs[[1]] = obs # Same list structure as training data
 
-  obs.features = lapply(obs.lst, prepareFeatures)
+  obs.features = lapply(obs.lst, prepareFeatures, cutoff = cutoff, featureSel = featureSel)
 
   obs.features
 }
 
-computeMahalanobis <- function(features, obs) {
+computeMahalanobis <- function(features, obs, cutoff, featureSel) {
 
   features <- as.data.frame(features)
-  obs.features <- as.data.frame(obsToFeatures(obs))
+  obs.features <- as.data.frame(obsToFeatures(obs, cutoff, featureSel))
 
   if (nrow(unique(features)) == 1) { # In the case of lineal of degree 1
     return (NA)
@@ -230,13 +226,13 @@ LOF <- function(obs, features, orderLst, top_n) {
 
 }
 
-distance <- function(obs, features) {
+distance <- function(obs, features, cutoff, featureSel) {
 
   #order.idx <- match(names(orderLst), names(features))
 
   #features <- features[order.idx]
 
-  res = unlist(sapply(features, function(x) computeMahalanobis(x, obs)))
+  res = unlist(sapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel)))
 
   res
 }
