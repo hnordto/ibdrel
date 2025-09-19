@@ -114,8 +114,15 @@ normalizeClassProbs = function(logprobs) {
 }
 
 classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
-  obs = obs[obs > cutoff]
-  logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
+  obs = obs[obs >= cutoff]
+
+  if (identical(obs, numeric(0))) {
+    logprobs = rep(-Inf, length(pdfuns)) # Likelihood = 0 for all classes if obs < cutoff
+  } else {
+    logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
+  }
+
+
 
   if(isTRUE(sort)) {
     sort(logprobs, decreasing = T)
