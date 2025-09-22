@@ -428,22 +428,6 @@ annotatePedigree = function(ped, ids = NULL) {
 }
 
 
-annotatePedigrees = function(pedlist) {
-
-  annotation_all = c()
-
-  for (i in 1:length(pedlist)) {
-    ped = pedlist[[i]]
-
-    annotation = annotatePedigree(ped)
-
-    annotation_all = c(annotation_all, annotation)
-
-  }
-
-  return (annotation_all)
-}
-
 pedigreesMetadata = function(pedlist) {
 
   nVar = 2
@@ -469,6 +453,7 @@ pedigreesMetadata = function(pedlist) {
 }
 
 pedsMetadata = function(pedlist) {
+
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
   metadata$details = lapply(pedlist, pedDetails)
