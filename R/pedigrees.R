@@ -375,35 +375,58 @@ vrbAbbr = function(x, ids = leaves(x)) {
 }
 
 annotatePedigree = function(ped, ids = NULL) {
-
   if (is.null(ids)) {
     leaves = identifyLeaves(ped)
   }
 
-  relationships = verbalisr::verbalise(ped, ids = leaves)
-  relationships_abb = vrbAbbr(ped, ids = leaves)
+  verb <- verbalisr::verbalise(ped, ids = leaves)
+
+  # Iterat over unilineal relationships
+  for (i in 1:length(verb)) {
+    rel <- verb[[i]]
+    type = rel$type
+    degree = rel$degree
+    half = isFALSE(rel$full)
 
 
-  for (i in 1:length(relationships)) {
-    relationship = relationships[[i]]
-    relationship_str = relationship$code
-    relationship_sexpath <- relationship$sexPath
+    switch(type,
+           lineal = {
+             annot = paste0("L-",degree)
+           },
+           sibling = {
+             annot = if(half) "hS" else "fS"
+           },
+           avuncular = {
+             annot = paste0(if(half) "hA-" else "fA-",degree)
+           },
+           cousin = {
+             cousDeg = min(length(rel$v1),length(rel$v2))-1
+             removal = rel$removal
+             annot = paste0(if(half) "h",cousDeg,"C",removal,"R")
+           }
+    )
 
-    relationship_sexpath_split <- unique(strsplit(relationship_sexpath,"")[[1]])
-    if (length(relationship_sexpath_split) == 1) {
-      relationship_sexpath <- relationship_sexpath_split[1]
-    }
+    sexpath = rel$sexPath
+    sexpath.distinct = unique(strsplit(sexpath, "")[[1]])
 
-    if (relationship_sexpath == "") {
-      annotation = paste0(relationship_str)
+    if (length(sexpath.distinct) == 1) {
+      sexpath.annot <- sexpath.distinct[1] # If distinct sexpath, only one char is needed for annot
     } else {
-      annotation = paste0(relationship_str, "-",relationship_sexpath)
+      sexpath.annot <- sexpath
     }
+
+    if (sexpath == "") {
+      annotation = paste0(annot)
+    } else {
+      annotation = paste0(annot, "-", sexpath.annot)
+    }
+
   }
 
   return (annotation)
 
 }
+
 
 annotatePedigrees = function(pedlist) {
 
