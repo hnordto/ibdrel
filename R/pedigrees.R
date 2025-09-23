@@ -423,9 +423,9 @@ annotatePedigree = function(ped, ids = NULL) {
 }
 
 condenseSexpath <- function(sexpath) {
-  sexpath.distinc = unique(strsplit(sexpath, ""[[1]]))
+  sexpath.distinct = unique(strsplit(sexpath, "")[[1]])
 
-  if (lengt(sexpath.distinct) == 1) {
+  if (length(sexpath.distinct) == 1) {
     return (sexpath.distinct[1])
   } else {
     return (sexpath)
@@ -595,11 +595,11 @@ groupDonnelly = function(pedlist, annotation) {
 
     if (type == "sibling") {
       if (isTRUE(full)) {
-        class.identifier.detailed = paste0("fS-", degree)
+        class.identifier.detailed = paste0("fS")
         class.identifier = class.identifier.detailed
       } else {
-        class.identifier.detailed = paste0("hS-",degree,"-",sexpath)
-        class.identifier = paste0("hS-",degree)
+        class.identifier.detailed = paste0("hS-",sexpath)
+        class.identifier = paste0("hS")
       }
     }
 
@@ -671,6 +671,7 @@ classTranslator <- function(class, resolution) {
     rel.write <- NULL
   }
 
+  rel.write <- trimws(rel.write)
 
 
 
