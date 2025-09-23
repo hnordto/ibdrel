@@ -18,25 +18,13 @@ suppressPackageStartupMessages({
 
 })
 
-# Data
-segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
-pedsDataRel = readRDS(system.file("data", "peds_unilineal.rds", package = "ibdrel"))
-metadata = ibdrel::pedsMetadata(pedsDataRel)
+# Load data
+
+segmentData = ibdrel::ibdrel_unilineal$segments
+peds = ibdrel::ibdrel_unilineal$peds
+metadata = ibdrel::pedsMetadata(peds)
 
 supported.features <- c("count", "total", "median", "longest", "shortest")
-
-
-
-#segmentDataKappa = readRDS(system.file("data", "segments_unilineal_kappa.rds", package = "ibdrel"))
-#segmentDataKinship = readRDS(system.file("data", "segments_unilineal_kinship.rds", package = "ibdrel"))
-#segmentDataDeg = readRDS(system.file("data", "segments_unilineal_degree.rds", package = "ibdrel"))
-
-
-
-#segmentData = readRDS(system.file("data", "segments_unilineal_rel.rds", package = "ibdrel"))
-#segmentData = aggregate.segments(segmentData,
-#                                 metadata,
-#                                 "eqclass.detailed")
 
 
 inputBoxUI <- function(id) {
@@ -104,7 +92,7 @@ inputBoxServer = function(id, data) {
       }, simplify = FALSE)
 
       data[["metadata"]] = metadata
-      data[["peds"]] = pedsDataRel
+      data[["peds"]] = peds
 
       data[["features"]] <- input$featureSelection
 
