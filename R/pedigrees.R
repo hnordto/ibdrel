@@ -407,13 +407,8 @@ annotatePedigree = function(ped, ids = NULL) {
     )
 
     sexpath = rel$sexPath
-    sexpath.distinct = unique(strsplit(sexpath, "")[[1]])
 
-    if (length(sexpath.distinct) == 1) {
-      sexpath.annot <- sexpath.distinct[1] # If distinct sexpath, only one char is needed for annot
-    } else {
-      sexpath.annot <- sexpath
-    }
+    sexpath.annot <- condenseSexpath(sexpath)
 
     if (sexpath == "") {
       annotation = paste0(annot)
@@ -425,6 +420,16 @@ annotatePedigree = function(ped, ids = NULL) {
 
   return (annotation)
 
+}
+
+condenseSexpath <- function(sexpath) {
+  sexpath.distinc = unique(strsplit(sexpath, ""[[1]]))
+
+  if (lengt(sexpath.distinct) == 1) {
+    return (sexpath.distinct[1])
+  } else {
+    return (sexpath)
+  }
 }
 
 
@@ -453,6 +458,10 @@ pedigreesMetadata = function(pedlist) {
 }
 
 pedsMetadata = function(pedlist) {
+
+  if (is.null(names(pedlist))) {
+    names(pedlist) = sapply(pedlist, annotatePedigree)
+  }
 
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
@@ -550,7 +559,7 @@ groupDonnelly = function(pedlist, annotation) {
     l2 = verb[[1]]$v2
     l.l1 = length(l1)
     l.l2 = length(l2)
-    sexpath = strsplit(rel, "-")[[1]][2]
+    sexpath = condenseSexpath(verb[[1]]$sexPath)
     nSteps = sum(verb[[1]]$nSteps)
 
     if (type == "cousin") {
@@ -566,10 +575,10 @@ groupDonnelly = function(pedlist, annotation) {
     if (type == "avuncular") {
       if (isTRUE(full)) {
         class.identifier.detailed = paste0("fA-",degree,"-",sexpath)
-        class.identifier = paste0("fAV-",degree)
+        class.identifier = paste0("fA-",degree)
       } else {
         class.identifier.detailed = paste0("hA-", degree, "-", sexpath)
-        class.identifier = paste0("hAV-", degree)
+        class.identifier = paste0("hA-", degree)
       }
     }
 
