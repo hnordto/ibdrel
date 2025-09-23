@@ -39,6 +39,7 @@ classBoxUI = function(id) {
         gt_output(NS(id, "relationshipTable"))
       ),
       pickerInput(NS(id, "selectPedigree"), "Pedigree:", choices = NULL),
+      textOutput(NS(id, "pedVerb")),
       plotOutput(NS(id, "pedPlot"))
     )
 
@@ -120,6 +121,19 @@ classBoxServer = function(id, data) {
 
     })
 
+    output$pedVerb <- renderText({
+      req(input$selectPedigree)
+
+      ped = data[["peds"]][[input$selectPedigree]]
+      ped.leaves = ibdrel::identifyLeaves(ped)
+
+      verb = verbalisr::verbalise(ped, ids = ped.leaves)[[1]]$rel
+
+      paste0(toupper(substr(verb,1,1)),
+             tolower(substr(verb,2,nchar(verb))))
+
+    })
+
 
   })
 }
@@ -176,7 +190,7 @@ relationshipTable <- function(data, selected.class) {
 
 
   df <- subset(metadata, class == selected.class)
-  df <- df[,c("code", "kappa0", "kappa1", "kappa2", "kinship")]
+  df <- df[,c("rel", "kappa0", "kappa1", "kappa2", "kinship")]
   df$kappa0 <- as.character(MASS::fractions(df$kappa0))
   df$kappa1 <- as.character(MASS::fractions(df$kappa1))
   df$kappa2 <- as.character(MASS::fractions(df$kappa2))
