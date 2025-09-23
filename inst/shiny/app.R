@@ -1,5 +1,3 @@
-
-
 ui = dashboardPage(
 
   # Header
@@ -43,6 +41,7 @@ ui = dashboardPage(
         likelihoodBoxUI("likelihoodTable")
       ),
 
+      # Class analysis
       column(
         width = 5,
         classBoxUI("classInfo")
