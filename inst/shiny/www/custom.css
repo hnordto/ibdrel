@@ -1,0 +1,13 @@
+
+
+.apptitle {
+  font-size: 2rem;
+  font-family: monospace;
+  color: white;
+  margin: 0rem 0rem 0rem 0.75rem;
+}
+
+.table-box {
+  height: 500px;
+  overflow-y: auto;
+}

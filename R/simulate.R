@@ -179,4 +179,20 @@ lengthIBD = function(simlist,
 
 }
 
+aggregateSegments = function(segments, metadata, metadata.agg.column) {
+  lookup = metadata |>
+    dplyr::select(rel, !!rlang::sym(metadata.agg.column)) |>
+    tibble::deframe()
+
+  agg.ids = lookup[names(segments)]
+
+  aggregatedSegments = purrr::map2(segments, agg.ids, ~ tibble::tibble(agg.id = .y, segment = list(.x))) |>
+    dplyr::bind_rows() |>
+    dplyr::group_by(agg.id) |>
+    dplyr::summarise(segments = list(unlist(segment, recursive = FALSE)),
+                     .groups = "drop") |>
+    tibble::deframe()
+
+  return (aggregatedSegments)
+}
 

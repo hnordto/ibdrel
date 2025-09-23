@@ -375,51 +375,63 @@ vrbAbbr = function(x, ids = leaves(x)) {
 }
 
 annotatePedigree = function(ped, ids = NULL) {
-
   if (is.null(ids)) {
     leaves = identifyLeaves(ped)
   }
 
-  relationships = verbalisr::verbalise(ped, ids = leaves)
-  relationships_abb = vrbAbbr(ped, ids = leaves)
+  verb <- verbalisr::verbalise(ped, ids = leaves)
+
+  # Iterat over unilineal relationships
+  for (i in 1:length(verb)) {
+    rel <- verb[[i]]
+    type = rel$type
+    degree = rel$degree
+    half = isFALSE(rel$full)
 
 
-  for (i in 1:length(relationships)) {
-    relationship = relationships[[i]]
-    relationship_str = relationship$code
-    relationship_sexpath <- relationship$sexPath
+    switch(type,
+           lineal = {
+             annot = paste0("L-",degree)
+           },
+           sibling = {
+             annot = if(half) "hS" else "fS"
+           },
+           avuncular = {
+             annot = paste0(if(half) "hA-" else "fA-",degree)
+           },
+           cousin = {
+             cousDeg = min(length(rel$v1),length(rel$v2))-1
+             removal = rel$removal
+             annot = paste0(if(half) "h",cousDeg,"C",removal,"R")
+           }
+    )
 
-    relationship_sexpath_split <- unique(strsplit(relationship_sexpath,"")[[1]])
-    if (length(relationship_sexpath_split) == 1) {
-      relationship_sexpath <- relationship_sexpath_split[1]
-    }
+    sexpath = rel$sexPath
 
-    if (relationship_sexpath == "") {
-      annotation = paste0(relationship_str)
+    sexpath.annot <- condenseSexpath(sexpath)
+
+    if (sexpath == "") {
+      annotation = paste0(annot)
     } else {
-      annotation = paste0(relationship_str, "-",relationship_sexpath)
+      annotation = paste0(annot, "-", sexpath.annot)
     }
+
   }
 
   return (annotation)
 
 }
 
-annotatePedigrees = function(pedlist) {
+condenseSexpath <- function(sexpath) {
+  sexpath.distinct = unique(strsplit(sexpath, "")[[1]])
 
-  annotation_all = c()
-
-  for (i in 1:length(pedlist)) {
-    ped = pedlist[[i]]
-
-    annotation = annotatePedigree(ped)
-
-    annotation_all = c(annotation_all, annotation)
-
+  if (length(sexpath.distinct) == 1) {
+    return (sexpath.distinct[1])
+  } else {
+    return (sexpath)
   }
-
-  return (annotation_all)
 }
+
 
 pedigreesMetadata = function(pedlist) {
 
@@ -446,6 +458,11 @@ pedigreesMetadata = function(pedlist) {
 }
 
 pedsMetadata = function(pedlist) {
+
+  if (is.null(names(pedlist))) {
+    names(pedlist) = sapply(pedlist, annotatePedigree)
+  }
+
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
   metadata$details = lapply(pedlist, pedDetails)
@@ -479,7 +496,7 @@ pedDegree = function(ped) { # Only supporting unilineal relationships as of now
   verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$degree
 }
 
-pedKappa = function(ped, which.kappa) { # Only supporting unilieal relationships as of now
+pedKappa = function(ped, which.kappa) { # Only supporting unilineal relationships as of now
   ribd::kappaIBD(ped, ids = identifyLeaves(ped))[which.kappa]
 
 }
@@ -542,49 +559,59 @@ groupDonnelly = function(pedlist, annotation) {
     l2 = verb[[1]]$v2
     l.l1 = length(l1)
     l.l2 = length(l2)
-    sexpath = strsplit(rel, "-")[[1]][2]
+    sexpath = condenseSexpath(verb[[1]]$sexPath)
     nSteps = sum(verb[[1]]$nSteps)
 
     if (type == "cousin") {
       if (isTRUE(full)) { # if full
-        class.identifier = paste0("fc-",degree,"-",sexpath)
+        class.identifier.detailed = paste0("fC-",degree,"-",sexpath)
+        class.identifier = paste0("fC-",degree)
       } else {
-        class.identifier = paste0("hc-", degree, "-", sexpath)
+        class.identifier.detailed = paste0("hC-", degree, "-", sexpath)
+        class.identifier = paste0("hC-", degree)
       }
     }
 
     if (type == "avuncular") {
       if (isTRUE(full)) {
-        class.identifier = paste0("fav-",degree,"-",sexpath)
+        class.identifier.detailed = paste0("fA-",degree,"-",sexpath)
+        class.identifier = paste0("fA-",degree)
       } else {
-        class.identifier = paste0("hav-", degree, "-", sexpath)
+        class.identifier.detailed = paste0("hA-", degree, "-", sexpath)
+        class.identifier = paste0("hA-", degree)
       }
     }
 
     if (type == "lineal") {
 
       if (degree == 1) {
-        class.identifier = paste0("lin-",degree)
+        class.identifier.detailed = paste0("L-",degree)
+        class.identifier = class.identifier.detailed
       } else {
-        class.identifier = paste0("lin-", degree, "-", sexpath)
+        class.identifier.detailed = paste0("L-", degree, "-", sexpath)
+        class.identifier = paste0("L-", degree)
       }
     }
 
     if (type == "sibling") {
       if (isTRUE(full)) {
-        class.identifier = paste0("sib-", degree)
+        class.identifier.detailed = paste0("fS")
+        class.identifier = class.identifier.detailed
       } else {
-        class.identifier = paste0("hsib-",degree,"-",sexpath)
+        class.identifier.detailed = paste0("hS-",sexpath)
+        class.identifier = paste0("hS")
       }
     }
 
 
 
     if (i == 1) {
-      grouper = data.frame(class = class.identifier,
+      grouper = data.frame(eqclass.detailed = class.identifier.detailed,
+                           eqclass = class.identifier,
                            rel = rel)
     } else {
-      grouper = rbind(grouper, data.frame(class = class.identifier,
+      grouper = rbind(grouper, data.frame(eqclass.detailed = class.identifier.detailed,
+                                          eqclass = class.identifier,
                                           rel = rel))
     }
 
@@ -594,4 +621,59 @@ groupDonnelly = function(pedlist, annotation) {
 
   return (grouper)
 
+}
+
+#' Translate a relationship class code on standardized ibdrel format to readable relationships
+#'
+classTranslator <- function(class, resolution) {
+
+  if (resolution == "eqclass.detailed" || resolution == "eqclass") {
+    dictionary <- list("L" = "Linear",
+                       "fA" = "Full avuncular",
+                       "hA" = "Half avuncular",
+                       "fC" = "Full cousins",
+                       "hC" = "Half cousins",
+                       "fS" = "Full siblings",
+                       "hS" = "Half siblings",
+                       "m" = "maternal",
+                       "p" = "paternal")
+
+    class.split <- strsplit(class, "-")[[1]]
+    reltype = class.split[1]
+    degree = class.split[2]
+
+    if (!is.na(class.split[3])) {
+      sexpath = class.split[3]
+
+      sexpath.split = strsplit(sexpath, "")[[1]]
+      sexpath.expanded = dictionary[sexpath.split]
+      sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
+    } else {
+      sexpath.write = ""
+    }
+
+    rel.write <- paste(dictionary[reltype], "of degree", degree, sexpath.write)
+  } else if (resolution == "kappa") {
+    class.split <- as.numeric(strsplit(class, "-")[[1]])
+    kappa0 = as.character(MASS::fractions(class.split[1]))
+    kappa1 = as.character(MASS::fractions(class.split[2]))
+    kappa2 = as.character(MASS::fractions(class.split[3]))
+
+    rel.write <- paste("\u03BA\u2080 =", kappa0, ",",
+                       "\u03BA\u2081 =", kappa1, ",",
+                       "\u03BA\u2082 =", kappa2)
+  } else if (resolution == "kinship") {
+    rel.write <- paste("\u03C6 =", as.character(MASS::fractions(as.numeric(class))))
+  } else if (resolution == "degree") {
+    rel.write <- paste("Degree", class)
+  } else {
+    warning("Unknown classification resolution.")
+    rel.write <- NULL
+  }
+
+  rel.write <- trimws(rel.write)
+
+
+
+  return(rel.write)
 }
