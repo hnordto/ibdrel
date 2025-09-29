@@ -542,6 +542,42 @@ groupDonnelly.dep <- function(pedlist, N, seed) {
   return (donnelly.rels)
 }
 
+donnellyRep <- function(degree) {
+
+  # Special case: Degree 1 (and 0) have no cousin relationships. These are sibling
+  if (degree %in% c(0,0)) {
+    return (NA)
+  }
+
+  l <- degree_to_l(degree, full = TRUE)
+  l <- l[!duplicated(l),]
+
+  cousDeg <- pmin(l$l1, l$l2)-1
+  removal <- abs(l$l1-l$l2)
+
+  # Which cousinDeg gives the lowest removal?
+  # This is the class representative
+  cousDeg.rep = cousDeg[which(removal == 0)]
+
+  # If removal == 0 does not exist, the relationship must be half
+  if (identical(cousDeg.rep, numeric(0))) {
+    l <- degree_to_l(degree, full = FALSE)
+    l <- l[!duplicated(l),]
+
+    cousDeg <- pmin(l$l1, l$l2)-1
+    removal <- abs(l$l1-l$l2)
+
+    cousDeg.rep = cousDeg[which(removal == 0)]
+    half = TRUE
+  } else {
+    half = FALSE
+  }
+
+  return(list(cousDeg = cousDeg.rep, half = half))
+
+
+}
+
 # More efficient approach using verbalisr() and skipping the simulation
 # Does not work on sex-specific paths
 # Only support unilieal relationships as of now
