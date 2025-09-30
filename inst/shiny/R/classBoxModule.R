@@ -19,30 +19,47 @@ classBoxUI = function(id) {
     collapsible = FALSE,
 
     title = div(
-      pickerInput(inputId = NS(id, "selectClass"), label = "Class:", choices = NULL)
+      "Analysis"
     ),
 
     tabPanel(
-      title = "Summary",
-      tags$h5("Summary"),
-      uiOutput(NS(id, "classInfo")),
-      tags$h5("IBD segment distribution"),
-      plotOutput(NS(id, "jointDistPlot")),
-      tags$h5("Outlier diagnostics"),
-      uiOutput(NS(id, "outlierInfo"))
-    ),
+      title = "Class analyser",
 
-    tabPanel(
-      title = "Pedigrees",
-      div(
-        class = "table-box-null",
-        gt_output(NS(id, "relationshipTable"))
+      box(
+        title = "Pedigrees",
+        width = NULL,
+        collapsible = TRUE,
+        collapsed = FALSE,
+        div(
+          class = "ped-plot",
+          actionBttn(NS(id, "prevPed"), "Previous"),
+          actionBttn(NS(id, "nextPed"), "Next"),
+          plotOutput(NS(id, "pedPlot"))
+        )
       ),
-      pickerInput(NS(id, "selectPedigree"), "Pedigree:", choices = NULL),
-      textOutput(NS(id, "pedVerb")),
-      plotOutput(NS(id, "pedPlot"))
-    )
 
+      box(
+        title = "IBD segment distribution",
+        width = NULL,
+        collapsible = TRUE,
+        collapsed = FALSE,
+        div(
+          class = "segment-plot",
+          plotOutput(NS(id, "jointDistPlot"))
+        )
+      ),
+
+      box(
+        title = "Outlier diagnostics",
+        width = NULL,
+        collapsible = TRUE,
+        collapsed = FALSE,
+        div(
+          class = "textbox",
+          uiOutput(NS(id, "outlierInfo"))
+        )
+      )
+    )
   )
 }
 
@@ -56,84 +73,56 @@ classBoxServer = function(id, data) {
     #})
 
     observe({
+      req(data[["selectedClass"]])
+      #peds = subset(data[["metadata"]], class == data[["selectedClass"]])[["rel"]]
+      #updatePickerInput(session, "selectPedigree", choices = peds)
 
-      res = data[["selectedTab"]]
-      likelihoods = data[["likelihoods"]][[res]]
-
-      # If not input, no ordering
-      if (!is.null(names(likelihoods))) {
-        classes <- names(sort(likelihoods, decreasing = TRUE))
-      } else {
-        classes <- data[["classes"]]
-      }
-
-      if(length(classes) == 0) return() # Escape if classes is not loaded yet (Shiny timing issue)
-
-      classes.labels <- sapply(classes, ibdrel::classTranslator, res)
-      updatePickerInput(session, "selectClass",
-                        choices = stats::setNames(classes, classes.labels))
-
-    })
-
-    observeEvent(input$selectClass, {
-      peds = subset(data[["metadata"]], class == input$selectClass)[["rel"]]
-      updatePickerInput(session, "selectPedigree", choices = peds)
-    })
-
-    output$classInfo <- renderUI({
-      req(input$selectClass)
-
-      checkLikelihood(data[["likelihoods"]][[data[["selectedTab"]]]])
-
-      makeSummaryOutput(data, data[["selectedTab"]], input$selectClass)
     })
 
 
     output$outlierInfo <- renderUI({
-      req(input$selectClass)
+      req(data[["selectedClass"]])
 
       checkObs(data[["obs"]])
 
-      makeOutlierOutput(data, data[["selectedTab"]], input$selectClass)
+      makeOutlierOutput(data, data[["selectedTab"]], data[["selectedClass"]])
     })
 
-    output$relationshipTable = render_gt({
-      req(input$selectClass)
-      relationshipTable(data, input$selectClass)
-    })
 
     output$jointDistPlot = renderPlot({
-      req(input$selectClass)
+      req(data[["selectedClass"]])
 
       resolution = data[["selectedTab"]]
 
-      jointDistPlot(data, resolution, input$selectClass)
+      jointDistPlot(data, resolution, data[["selectedClass"]])
+    })
+
+    # Pedigree plotting
+
+    peds <- reactive({ # Peds in selected class
+      metadata <- data[["metadata"]]
+      peds_all <- data[["peds"]]
+      selected <- subset(metadata, class == data[["selectedClass"]])$rel
+      peds_all[selected]
+    })
+
+    current_index <- reactiveVal(1)
+
+    observeEvent(input$nextPed, {
+      idx <- current_index()
+      if (idx < length(peds())) current_index(idx + 1)
+    })
+
+    observeEvent(input$prevPed, {
+      idx <- current_index()
+      if (idx > 1) current_index(idx - 1)
     })
 
     output$pedPlot <- renderPlot({
-      req(input$selectPedigree)
 
-      ped = data[["peds"]][[input$selectPedigree]]
-      ped.leaves = ibdrel::identifyLeaves(ped)
-      ped = ped |> pedtools::setSex(leaves, sex= 0)
-
-      plot(ped, autoScale = TRUE, hatched = ped.leaves, fill = list(red = ped.leaves))
+      pedPlot(peds()[[current_index()]])
 
     })
-
-    output$pedVerb <- renderText({
-      req(input$selectPedigree)
-
-      ped = data[["peds"]][[input$selectPedigree]]
-      ped.leaves = ibdrel::identifyLeaves(ped)
-
-      verb = verbalisr::verbalise(ped, ids = ped.leaves)[[1]]$rel
-
-      paste0(toupper(substr(verb,1,1)),
-             tolower(substr(verb,2,nchar(verb))))
-
-    })
-
 
   })
 }
@@ -243,5 +232,22 @@ jointDistPlot <- function(data, resolution, selected.class) {
   }
 
   return (p)
+
+}
+
+# Inspired by `pedbuildr` plot()
+pedPlot <- function(ped) {
+
+
+  ped.leaves = ibdrel::identifyLeaves(ped)
+  ped = ped |> pedtools::setSex(leaves, sex= 0)
+  verb = verbalisr::verbalise(ped, ids = ped.leaves)[[1]]$rel
+
+  title <- paste0(toupper(substr(verb,1,1)),
+                  tolower(substr(verb,2,nchar(verb))))
+
+
+  plot(ped, hatched = ped.leaves, fill = list(red = ped.leaves),
+       labs = NULL, autoScale = TRUE, title = title)
 
 }
