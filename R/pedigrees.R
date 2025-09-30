@@ -387,21 +387,22 @@ annotatePedigree = function(ped, ids = NULL) {
     type = rel$type
     degree = rel$degree
     half = isFALSE(rel$full)
+    removal = rel$removal
+    ng = if (removal > 1) removal - 1 else 0
 
 
     switch(type,
            lineal = {
-             annot = paste0("L-",degree)
+             annot = paste0("L",degree)
            },
            sibling = {
              annot = if(half) "hS" else "fS"
            },
            avuncular = {
-             annot = paste0(if(half) "hA-" else "fA-",degree)
+             annot = paste0(if(half) "h", if(ng > 0) strrep("G",ng), "A")
            },
            cousin = {
              cousDeg = min(length(rel$v1),length(rel$v2))-1
-             removal = rel$removal
              annot = paste0(if(half) "h",cousDeg,"C",removal,"R")
            }
     )
@@ -542,40 +543,33 @@ groupDonnelly.dep <- function(pedlist, N, seed) {
   return (donnelly.rels)
 }
 
-donnellyRep <- function(degree) {
+donnellyRep <- function(degree, half) {
 
   # Special case: Degree 1 (and 0) have no cousin relationships. These are sibling
   if (degree %in% c(0,0)) {
     return (NA)
   }
 
-  l <- degree_to_l(degree, full = TRUE)
+  full <- isFALSE(half)
+
+  l <- degree_to_l(degree, full = full)
   l <- l[!duplicated(l),]
 
   cousDeg <- pmin(l$l1, l$l2)-1
   removal <- abs(l$l1-l$l2)
 
-  # Which cousinDeg gives the lowest removal?
-  # This is the class representative
-  cousDeg.rep = cousDeg[which(removal == 0)]
 
-  # If removal == 0 does not exist, the relationship must be half
-  if (identical(cousDeg.rep, numeric(0))) {
-    l <- degree_to_l(degree, full = FALSE)
-    l <- l[!duplicated(l),]
+  cousDeg.rep <- cousDeg[which(removal == min(removal))[1]] # First with lowest removal
 
-    cousDeg <- pmin(l$l1, l$l2)-1
-    removal <- abs(l$l1-l$l2)
+  return (list(cousDeg = cousDeg.rep, removal = min(removal)))
+}
 
-    cousDeg.rep = cousDeg[which(removal == 0)]
-    half = TRUE
-  } else {
-    half = FALSE
-  }
-
-  return(list(cousDeg = cousDeg.rep, half = half))
-
-
+donnellyAnnot <- function(degree, half) {
+  rep <- donnellyRep(degree, half)
+  ped <- cousinPed(degree = rep$cousDeg, removal = rep$removal, half = half)
+  annot <- annotatePedigree(ped)
+  annot <- strsplit(annot, "-")[[1]][1] # Remove sexpath, to be appended later
+  return (annot)
 }
 
 # More efficient approach using verbalisr() and skipping the simulation
@@ -599,46 +593,22 @@ groupDonnelly = function(pedlist, annotation) {
     nSteps = sum(verb[[1]]$nSteps)
 
     if (type == "cousin") {
-      if (isTRUE(full)) { # if full
-        class.identifier.detailed = paste0("fC-",degree,"-",sexpath)
-        class.identifier = paste0("fC-",degree)
+
+      if(isTRUE(full)) {
+        annot = donnellyAnnot(degree, half = F)
+
+        class.identifier.detailed = paste0(annot,"-",sexpath)
+        class.identifier = annot
       } else {
-        class.identifier.detailed = paste0("hC-", degree, "-", sexpath)
-        class.identifier = paste0("hC-", degree)
+        annot = donnellyAnnot(degree, half = T)
+
+        class.identifier.detailed = paste0(annot,"-",sexpath)
+        class.identifier = annot
       }
+    } else {
+      class.identifier.detailed = rel
+      class.identifier = strsplit(rel, "-")[[1]][1]
     }
-
-    if (type == "avuncular") {
-      if (isTRUE(full)) {
-        class.identifier.detailed = paste0("fA-",degree,"-",sexpath)
-        class.identifier = paste0("fA-",degree)
-      } else {
-        class.identifier.detailed = paste0("hA-", degree, "-", sexpath)
-        class.identifier = paste0("hA-", degree)
-      }
-    }
-
-    if (type == "lineal") {
-
-      if (degree == 1) {
-        class.identifier.detailed = paste0("L-",degree)
-        class.identifier = class.identifier.detailed
-      } else {
-        class.identifier.detailed = paste0("L-", degree, "-", sexpath)
-        class.identifier = paste0("L-", degree)
-      }
-    }
-
-    if (type == "sibling") {
-      if (isTRUE(full)) {
-        class.identifier.detailed = paste0("fS")
-        class.identifier = class.identifier.detailed
-      } else {
-        class.identifier.detailed = paste0("hS-",sexpath)
-        class.identifier = paste0("hS")
-      }
-    }
-
 
 
     if (i == 1) {
@@ -663,25 +633,23 @@ groupDonnelly = function(pedlist, annotation) {
 #'
 classTranslator <- function(class, resolution) {
 
+  dictionary <- list("m" = "maternal",
+                     "p" = "paternal")
+
   if (resolution == "eqclass.detailed" || resolution == "eqclass") {
-    dictionary <- list("L" = "Linear",
-                       "fA" = "Full avuncular",
-                       "hA" = "Half avuncular",
-                       "fC" = "Full cousins",
-                       "hC" = "Half cousins",
-                       "fS" = "Full siblings",
-                       "hS" = "Half siblings",
-                       "m" = "maternal",
-                       "p" = "paternal")
 
-    class.split <- strsplit(class, "-")[[1]]
-    reltype = class.split[1]
-    degree = class.split[2]
+    # Split on half
+    class.split.half <- strsplit(class, "h")[[1]]
 
-    if (!is.na(class.split[3])) {
-      sexpath = class.split[3]
+    # Relationship segment
+    class.split.rel <- strsplit(class.split.half[2], "-")[[1]][1]
+    class.split.sex <- strsplit(class.split.half[2], "-")[[1]][2]
 
-      sexpath.split = strsplit(sexpath, "")[[1]]
+    cousDeg <- strsplit(class.split.rel, "")[[1]][1]
+    removal <- strsplit(class.split.rel, "")[[1]][3]
+
+    if (!(class.split.sex == "")) {
+      sexpath.split = strsplit(class.split.sex, "")[[1]]
       sexpath.expanded = dictionary[sexpath.split]
       sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
     } else {
