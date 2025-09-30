@@ -18,10 +18,15 @@ suppressPackageStartupMessages({
 
 })
 
-# Load data
+# Load data XX FIX LATER XX
+
+peds = ibdrel::ibdrel_unilineal$peds
+
+annotation <- sapply(peds, annotatePedigree)
+names(peds) <- annotation
 
 segmentData = ibdrel::ibdrel_unilineal$segments
-peds = ibdrel::ibdrel_unilineal$peds
+names(segmentData) <- annotation
 metadata = ibdrel::pedsMetadata(peds)
 
 supported.features <- c("count", "total", "median", "longest", "shortest")
