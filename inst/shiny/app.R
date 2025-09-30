@@ -26,6 +26,21 @@ ui = dashboardPage(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
 
+    tags$script(HTML("
+    Shiny.addCustomMessageHandler('initClickableCells', function(message) {
+  var inputId = message.ns; // namespaced inputId
+  $('.clickable-cell').off('click').on('click', function() {
+    var val = $(this).attr('id').replace(/^rel_/, '');
+    Shiny.setInputValue(inputId, val, {priority:'event'});
+
+    // Highlight clicked cell
+    $('.clickable-cell').css('background-color', '');
+    $(this).css('background-color', '#ffeaa7');
+  });
+});;
+  ")),
+
+
     fluidRow(
 
       # Input
