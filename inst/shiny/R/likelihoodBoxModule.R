@@ -175,12 +175,16 @@ likelihoodTable <- function(data, resolution, session) {
 
   classlabels = sapply(names(likelihoods), function(x) {
     metadata.class <- metadata[metadata$class == x,]$class
+    lab = ibdrel::classTranslator(x, resolution)
     if (length(metadata.class) > 1) {
-      paste(x, "[+]")
+      paste(lab, "[+]")
     } else {
-      x
+      lab
     }
   })
+  classlabels = firstup(classlabels) # First letter to uppercase
+
+  classlabels <- setNames(classlabels, names(likelihoods))
 
   kappa0 = as.character(MASS::fractions(metadata.subset$kappa0))
   kappa1 = as.character(MASS::fractions(metadata.subset$kappa1))
@@ -239,7 +243,7 @@ likelihoodTable <- function(data, resolution, session) {
       fn = function(x) {
         sprintf(
           "<div class='clickable-cell' id='rel_%s'>%s</div>",
-          x, x
+          x, classlabels[x]
         )
       }
     ) |>
@@ -257,4 +261,10 @@ likelihoodTable <- function(data, resolution, session) {
   }, once = TRUE)
 
   return (res)
+}
+
+
+firstup <- function(x) {
+  substr(x, 1, 1) <- toupper(substr(x, 1, 1))
+  x
 }

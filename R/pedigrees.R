@@ -396,10 +396,10 @@ annotatePedigree = function(ped, ids = NULL) {
              annot = paste0("L",degree)
            },
            sibling = {
-             annot = if(half) "hS" else "fS"
+             annot = if(half) "hS" else "S"
            },
            avuncular = {
-             annot = paste0(if(half) "h", if(ng > 0) strrep("G",ng), "A")
+             annot = paste0(if(half) "h", if(ng > 0) paste0("G(",ng,")"), "A")
            },
            cousin = {
              cousDeg = min(length(rel$v1),length(rel$v2))-1
@@ -629,6 +629,17 @@ groupDonnelly = function(pedlist, annotation) {
 
 }
 
+numtimes = function(n) {
+  if(n < 0) stop2("`n` must be nonnegative")
+  if(n == 0) return("")
+  if(n == 1) return("once")
+  if(n == 2) return("twice")
+  paste(n, "times")
+}
+
+is_number <- function(x) grepl("^[0-9]+$", x)
+
+
 #' Translate a relationship class code on standardized ibdrel format to readable relationships
 #'
 classTranslator <- function(class, resolution) {
@@ -637,18 +648,62 @@ classTranslator <- function(class, resolution) {
                      "p" = "paternal")
 
   if (resolution == "eqclass.detailed" || resolution == "eqclass") {
+    # Split on sex path
+
+    class.split.rel <- strsplit(class, "-")[[1]][1]
+    class.split.sex <- strsplit(class, "-")[[1]][2]
 
     # Split on half
-    class.split.half <- strsplit(class, "h")[[1]]
+    rel.half <- strsplit(class.split.rel, "h")[[1]]
 
-    # Relationship segment
-    class.split.rel <- strsplit(class.split.half[2], "-")[[1]][1]
-    class.split.sex <- strsplit(class.split.half[2], "-")[[1]][2]
+    if (length(rel.half) > 1) {
+      rel <- rel.half[2]
+      half.write = "half"
+    } else {
+      rel <- rel.half[1]
+      half.write = ""
+    }
 
-    cousDeg <- strsplit(class.split.rel, "")[[1]][1]
-    removal <- strsplit(class.split.rel, "")[[1]][3]
+    rel.split <- strsplit(rel, "")[[1]]
 
-    if (!(class.split.sex == "")) {
+    # Check rel type. If first is numeric (valid), reltype is cousin
+    if (is_number(rel.split[1])) {
+      cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
+      rem <- numtimes(as.numeric(rel.split[3]))
+
+      if (rem == "") {
+        rel.write <- paste(half.write, cousDeg, "cousins")
+
+      } else {
+        rel.write <- paste(half.write, cousDeg, "cousins", rem, "removed")
+      }
+
+
+    } else if (rel.split[1] == "G" || rel.split[1] == "A") {
+
+      if (grepl("\\(\\d+\\)", rel)) {
+        rem <- gsub(".*\\((\\d+)\\).*", "\\1", rel)
+      } else {
+        rem <- NA
+      }
+
+      if (!is.na(rem)) {
+        rel.write <- paste0(half.write, " great (", rem, ") avuncular")
+      } else {
+        rel.write <- paste(half.write, "avuncular")
+      }
+
+    } else if (rel.split[1] == "S") {
+
+      rel.write <- paste(half.write, "siblings")
+
+    } else if (rel.split[1] == "L") {
+      linDeg <- strsplit(rel, "L")[[1]][2]
+
+      rel.write <- paste("lineal of degree", linDeg)
+    }
+
+    if (!(is.na(class.split.sex))) {
       sexpath.split = strsplit(class.split.sex, "")[[1]]
       sexpath.expanded = dictionary[sexpath.split]
       sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
@@ -656,28 +711,29 @@ classTranslator <- function(class, resolution) {
       sexpath.write = ""
     }
 
-    rel.write <- paste(dictionary[reltype], "of degree", degree, sexpath.write)
-  } else if (resolution == "kappa") {
-    class.split <- as.numeric(strsplit(class, "-")[[1]])
-    kappa0 = as.character(MASS::fractions(class.split[1]))
-    kappa1 = as.character(MASS::fractions(class.split[2]))
-    kappa2 = as.character(MASS::fractions(class.split[3]))
+    rel.write = paste(rel.write, sexpath.write)
 
-    rel.write <- paste("\u03BA\u2080 =", kappa0, ",",
-                       "\u03BA\u2081 =", kappa1, ",",
-                       "\u03BA\u2082 =", kappa2)
+  } else if (resolution == "kappa") {
+    kappa.split <- as.numeric(strsplit(class, "-")[[1]])
+    kappa0 = as.character(MASS::fractions(kappa.split[1]))
+    kappa1 = as.character(MASS::fractions(kappa.split[2]))
+    kappa2 = as.character(MASS::fractions(kappa.split[3]))
+
+    rel.write <- paste0("(", kappa0, " , ", kappa1, " , ", kappa2, ")")
+
   } else if (resolution == "kinship") {
-    rel.write <- paste("\u03C6 =", as.character(MASS::fractions(as.numeric(class))))
+    rel.write <- as.character(MASS::fractions(as.numeric(class)))
   } else if (resolution == "degree") {
-    rel.write <- paste("Degree", class)
+    rel.write <- class
   } else {
-    warning("Unknown classification resolution.")
-    rel.write <- NULL
+    stop("Unknown classification resolution")
   }
 
   rel.write <- trimws(rel.write)
-
-
-
   return(rel.write)
+
+
+
+
+
 }
