@@ -605,6 +605,23 @@ groupDonnelly = function(pedlist, annotation) {
         class.identifier.detailed = paste0(annot,"-",sexpath)
         class.identifier = annot
       }
+
+    } else if (type == "avuncular")  {
+
+      # Half avuncular grouped with half cousins
+      # Full avuncular are separate classes
+
+      if(isTRUE(full)) {
+        class.identifier.detailed = rel
+        class.identifier = strsplit(rel, "-")[[1]][1]
+      } else {
+        annot = donnellyAnnot(degree, half = TRUE)
+
+        class.identifier.detailed = paste0(annot, "-", sexpath)
+        class.identifier = annot
+      }
+
+
     } else {
       class.identifier.detailed = rel
       class.identifier = strsplit(rel, "-")[[1]][1]
@@ -658,7 +675,7 @@ classTranslator <- function(class, resolution) {
 
     if (length(rel.half) > 1) {
       rel <- rel.half[2]
-      half.write = "half"
+      half.write = "half "
     } else {
       rel <- rel.half[1]
       half.write = ""
@@ -669,13 +686,14 @@ classTranslator <- function(class, resolution) {
     # Check rel type. If first is numeric (valid), reltype is cousin
     if (is_number(rel.split[1])) {
       cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
-      rem <- numtimes(as.numeric(rel.split[3]))
+      rem <- rel.split[3]
+      #rem <- numtimes(as.numeric(rel.split[3]))
 
-      if (rem == "") {
-        rel.write <- paste(half.write, cousDeg, "cousins")
+      if (rem == 0) {
+        rel.write <- paste0(half.write, cousDeg, " cous")
 
       } else {
-        rel.write <- paste(half.write, cousDeg, "cousins", rem, "removed")
+        rel.write <- paste0(half.write, cousDeg, " cous ", rem, "R")
       }
 
 
@@ -688,25 +706,31 @@ classTranslator <- function(class, resolution) {
       }
 
       if (!is.na(rem)) {
-        rel.write <- paste0(half.write, " great (", rem, ") avuncular")
+        rel.write <- paste0(half.write, " G*", rem, " avunc")
       } else {
-        rel.write <- paste(half.write, "avuncular")
+        rel.write <- paste(half.write, "avunc")
       }
 
     } else if (rel.split[1] == "S") {
 
-      rel.write <- paste(half.write, "siblings")
+      rel.write <- paste(half.write, "sib")
 
     } else if (rel.split[1] == "L") {
-      linDeg <- strsplit(rel, "L")[[1]][2]
+      linDeg <- as.integer(strsplit(rel, "L")[[1]][2])
 
-      rel.write <- paste("lineal of degree", linDeg)
+      if (linDeg > 2) {
+        rel.write <- paste0("G*", linDeg-1, " parent")
+      } else if (linDeg == 2) {
+        rel.write <- paste0("G parent")
+      } else {
+        rel.write <- paste0("parent")
+      }
     }
 
     if (!(is.na(class.split.sex))) {
       sexpath.split = strsplit(class.split.sex, "")[[1]]
       sexpath.expanded = dictionary[sexpath.split]
-      sexpath.write = paste0("(",paste(sexpath.expanded, collapse = "-"),")")
+      sexpath.write = paste0("(",paste(sexpath.split, collapse = "-"),")")
     } else {
       sexpath.write = ""
     }
@@ -731,9 +755,4 @@ classTranslator <- function(class, resolution) {
 
   rel.write <- trimws(rel.write)
   return(rel.write)
-
-
-
-
-
 }
