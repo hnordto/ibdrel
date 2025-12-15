@@ -86,7 +86,8 @@ inputBoxUI <- function(id) {
                     buttonLabel = icon("folder-open"),
                     accept = c(".txt")),
           title = "Upload"
-        ),
+        )
+
       )
 
     ),
@@ -227,7 +228,6 @@ inputBoxServer = function(id, data) {
                sep = ",")
       updateTextAreaInput(session, "segmentInput", value = paste(x, collapse = "\n"))
     })
-
   })
 
 }

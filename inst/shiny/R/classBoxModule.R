@@ -10,30 +10,60 @@ checkObs = function(obs) {
   }
 }
 
+checkSelectedClass = function(selected) {
+  if(is.null(selected)) {
+    validated(need(FALSE, "Please select a class."))
+  }
+}
+
+prevPed = function(id) {
+  tooltip(
+    actionBttn(
+      inputId = NS(id, "prevPed"),
+      label = NULL,
+      size = "sm",
+      style = "jelly",
+      icon = icon("backward-step")
+    ),
+    title = "Previous pedigree"
+  )
+}
+
+nextPed = function(id) {
+  tooltip(
+    actionBttn(
+      inputId = NS(id, "nextPed"),
+      label = NULL,
+      size = "sm",
+      style = "jelly",
+      icon = icon("forward-step")
+    ),
+    title = "Next pedigree"
+  )
+}
+
 classBoxUI = function(id) {
 
   tabBox(
     id = NS(id, "classTabs"),
     width = NULL,
-    selected = "Summary",
+    selected = "Details",
     collapsible = FALSE,
 
-    title = div(
-      "Analysis"
-    ),
+    title = NULL,
 
     tabPanel(
-      title = "Class analyser",
+      title = "Details",
 
       box(
         title = "Pedigrees",
         width = NULL,
         collapsible = TRUE,
-        collapsed = FALSE,
+        collapsed = TRUE,
         div(
           class = "ped-plot",
-          actionBttn(NS(id, "prevPed"), "Previous"),
-          actionBttn(NS(id, "nextPed"), "Next"),
+          prevPed(id),
+          nextPed(id),
           plotOutput(NS(id, "pedPlot"))
         )
       ),
@@ -42,7 +72,7 @@ classBoxUI = function(id) {
         title = "IBD segment distribution",
         width = NULL,
         collapsible = TRUE,
-        collapsed = FALSE,
+        collapsed = TRUE,
         div(
           class = "segment-plot",
           plotOutput(NS(id, "jointDistPlot"))
@@ -53,7 +83,7 @@ classBoxUI = function(id) {
         title = "Outlier diagnostics",
         width = NULL,
         collapsible = TRUE,
-        collapsed = FALSE,
+        collapsed = TRUE,
         div(
           class = "textbox",
           uiOutput(NS(id, "outlierInfo"))
@@ -106,7 +136,13 @@ classBoxServer = function(id, data) {
       peds_all[selected]
     })
 
+
+
     current_index <- reactiveVal(1)
+    observeEvent(input$resTabs, {
+      current_index(1)
+    })
+
 
     observeEvent(input$nextPed, {
       idx <- current_index()

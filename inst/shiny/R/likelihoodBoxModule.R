@@ -3,6 +3,8 @@ helpWidget = function(id) {
     actionBttn(
       inputId = NS(id, "help"),
       label = NULL,
+      style = "jelly",
+      size = "sm",
       icon = icon("question")
     ),
     title = "See help on this panel."
@@ -26,15 +28,12 @@ likelihoodBoxUI = function(id) {
 
       title = div(
         div(
-          "Result table",
-        ),
-        div(
           helpWidget(id)
         )
       ),
 
       tabPanel(
-        title = "Sex-specific pedigree",
+        title = "Ped",
         value = "eqclass.detailed",
         div(
           class = "table-box",
@@ -43,7 +42,7 @@ likelihoodBoxUI = function(id) {
       ),
 
       tabPanel(
-        title = "Pedigree",
+        title = "Rel",
         value = "eqclass",
         div(
           class = "table-box",
@@ -175,12 +174,7 @@ likelihoodTable <- function(data, resolution, session) {
 
   classlabels = sapply(names(likelihoods), function(x) {
     metadata.class <- metadata[metadata$class == x,]$class
-    lab = ibdrel::classTranslator(x, resolution)
-    if (length(metadata.class) > 1) {
-      paste(lab, "[+]")
-    } else {
-      lab
-    }
+    ibdrel::classTranslator(x, resolution)
   })
   classlabels = firstup(classlabels) # First letter to uppercase
 
@@ -206,6 +200,7 @@ likelihoodTable <- function(data, resolution, session) {
                 Kinship = kinship,
                 Degree = degree)
     colnames(df)[5:8] <- c("\u03BA\u2080", "\u03BA\u2081", "\u03BA\u2082", "\u03C6")
+    class_rename = "Ped"
   }
 
   if (resolution == "kappa") {
@@ -213,14 +208,19 @@ likelihoodTable <- function(data, resolution, session) {
                 Kinship = kinship,
                 Degree = degree)
     colnames(df)[5] <- c("\u03C6")
+    class_rename = "\u03BA"
   }
 
 
   if (resolution == "kinship") {
     df <- cbind(df,
                 Degree = metadata.subset$degree)
+    class_rename = "\u03C6"
   }
 
+  if (resolution == "degree") {
+    class_rename = "Deg"
+  }
 
 
   res <- df |>
@@ -251,7 +251,26 @@ likelihoodTable <- function(data, resolution, session) {
       style = cell_fill(color = "forestgreen", alpha = .25),
       locations = cells_body(columns = c(Class, Likelihood))
     ) |>
-    gt_theme_538(quiet = TRUE)
+
+    tab_options(
+      data_row.padding = px(1),
+      container.padding.y = px(3)
+    ) |>
+
+    cols_width(
+      Rank ~ "2em",
+      Outlier ~ "2em",
+      Class ~ "15em",
+      Likelihood ~ "5em",
+      everything() ~ "3em"
+    ) |>
+
+    cols_label(
+      Rank = "",
+      Outlier = "",
+      Class = class_rename,
+      Likelihood = "Lik"
+    )
 
   session$onFlushed(function() {
     session$sendCustomMessage(

@@ -45,13 +45,13 @@ ui = dashboardPage(
 
       # Input
       column(
-        width = 3,
+        width = 2,
         inputBoxUI("input")
       ),
 
       # Likelihood table
       column(
-        width = 4,
+        width = 5,
 
         likelihoodBoxUI("likelihoodTable")
       ),
