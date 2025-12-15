@@ -31,7 +31,6 @@ metadata = ibdrel::pedsMetadata(peds)
 
 supported.features <- c("count", "total", "median", "longest", "shortest")
 
-
 inputBoxUI <- function(id) {
 
   box(
@@ -57,6 +56,28 @@ inputBoxUI <- function(id) {
 
     # Input
     h5("Input"),
+    tabsetPanel(
+      id = NS(id, "inputMode"),
+      type = "pills",
+
+      tabPanel(
+        title = "Segments",
+        value = "segments"
+      ),
+
+      tabPanel(
+        title = "Simulate example",
+        value = "simulate",
+        tooltip(
+          selectInput(inputId = NS(id, "simrel"),
+                      label = "Relationship",
+                      choices = annotation),
+          title = "Simulate example"),
+        actionBttn(inputId = NS(id, "simulateButton"),
+                   "Simulate")
+      )
+    ),
+
     tooltip(
       textAreaInput(inputId = NS(id, "segmentInput"),
                     label = "Segment lengths (cM)",
@@ -150,7 +171,42 @@ inputBoxServer = function(id, data) {
       data[["cutoff"]] = input$cutoff
     })
 
+    # Input mode
 
+    observeEvent(input$inputMode, {
+      if (input$inputMode == "simulate") {
+        shinyjs::runjs(sprintf(
+          "$('#%s').prop('readonly', true);",
+          NS(id, "segmentInput")
+        ))
+      } else {
+        shinyjs::runjs(sprintf(
+          "$('#%s').prop('readonly', false);",
+          NS(id, "segmentInput")
+        ))
+      }
+    }, ignoreInit = TRUE)
+
+
+    # Simulate example
+
+    observeEvent(input$simulateButton, {
+
+      ped = data[["peds"]][[input$simrel]]
+      simids = ibdrel::identifyLeaves(ped)
+
+      segs = ibdsim2::ibdsim(ped, ids = simids, N = 1,
+                             verbose = FALSE) |>
+        ibdsim2::findPattern(pattern = list(carriers = simids)) |>
+        ibdsim2::segmentStats(returnAll = TRUE)
+
+      lens = segs$allSegs |> round(digits = 4)
+
+      updateTextAreaInput(session, "segmentInput", value = paste(lens, collapse = "\n"))
+
+    })
   })
 
 }
+
+
