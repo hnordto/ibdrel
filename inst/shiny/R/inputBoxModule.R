@@ -66,16 +66,29 @@ inputBoxUI <- function(id) {
       ),
 
       tabPanel(
-        title = "Simulate example",
+        title = "Simulate",
         value = "simulate",
         tooltip(
           selectInput(inputId = NS(id, "simrel"),
                       label = "Relationship",
                       choices = annotation),
-          title = "Simulate example"),
+          title = "Simulate"),
         actionBttn(inputId = NS(id, "simulateButton"),
                    "Simulate")
+      ),
+
+      tabPanel(
+        title = "Upload",
+        value = "upload",
+        tooltip(
+          fileInput(inputId = NS(id, "segfile"),
+                    label = "Segments file",
+                    buttonLabel = icon("folder-open"),
+                    accept = c(".txt")),
+          title = "Upload"
+        ),
       )
+
     ),
 
     tooltip(
@@ -174,7 +187,7 @@ inputBoxServer = function(id, data) {
     # Input mode
 
     observeEvent(input$inputMode, {
-      if (input$inputMode == "simulate") {
+      if (input$inputMode %in% c("simulate", "upload")) {
         shinyjs::runjs(sprintf(
           "$('#%s').prop('readonly', true);",
           NS(id, "segmentInput")
@@ -205,6 +218,16 @@ inputBoxServer = function(id, data) {
       updateTextAreaInput(session, "segmentInput", value = paste(lens, collapse = "\n"))
 
     })
+
+    # Load from file
+
+    observeEvent(input$segfile, {
+      x = scan(input$segfile$datapath,
+               what = numeric(),
+               sep = ",")
+      updateTextAreaInput(session, "segmentInput", value = paste(x, collapse = "\n"))
+    })
+
   })
 
 }
