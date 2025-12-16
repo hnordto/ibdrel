@@ -1,6 +1,11 @@
-#' Launch ibdRel
+#' Launch the ibdrel app
 #'
-#' This launchaes the ibdRel shiny applications
+#' This launches the Shiny application for performing pairwise relationship estimation.
+#'
+#' @examples
+#' \dontrun{
+#' launchApp()
+#' }
 #'
 #' @export
 
