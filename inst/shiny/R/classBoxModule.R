@@ -139,7 +139,7 @@ classBoxServer = function(id, data) {
 
 
     current_index <- reactiveVal(1)
-    observeEvent(input$resTabs, {
+    observeEvent(c(input$resTabs, data[["selectedClass"]]), {
       current_index(1)
     })
 
@@ -149,6 +149,7 @@ classBoxServer = function(id, data) {
       if (idx < length(peds())) current_index(idx + 1)
     })
 
+
     observeEvent(input$prevPed, {
       idx <- current_index()
       if (idx > 1) current_index(idx - 1)
@@ -156,9 +157,18 @@ classBoxServer = function(id, data) {
 
     output$pedPlot <- renderPlot({
 
+      if (is.null(data[["selectedClass"]])) {
+        validate(need(FALSE, "Please select a class from the likelihood table."))
+      }
+
+      if (length(peds()) < current_index()) {
+        validate(need(FALSE, "Please select a class from the likelihood table."))
+      }
+
       pedPlot(peds()[[current_index()]])
 
     })
+
 
   })
 }

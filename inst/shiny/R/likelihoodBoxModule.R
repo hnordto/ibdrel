@@ -13,7 +13,7 @@ helpWidget = function(id) {
 
 checkLikelihood = function(likelihood) {
   if (all(likelihood == -Inf)) {
-    validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length >= cutoff."))
+    validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length above cutoff value."))
   }
 }
 

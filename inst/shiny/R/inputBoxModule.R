@@ -102,9 +102,9 @@ inputBoxUI <- function(id) {
     # Controls
     h5("Results"),
     materialSwitch(inputId = NS(id, "normalizeButton"), value = TRUE,
-                   label = "Normalize likelihoods?"),
+                   label = "Normalize likelihoods"),
     materialSwitch(inputId = NS(id, "filterButton"), value = FALSE,
-                   label = "Filter outliers?"),
+                   label = "Filter outliers"),
 
     h5("Outlier detection"),
     numericInput(
