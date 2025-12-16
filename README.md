@@ -1,22 +1,30 @@
 
-# ibdRel
+<!-- README.md is generated from README.Rmd. Please edit that file -->
 
-ibdRel is an R package for working with genetic relationship estimation from simulated identity by descent (IBD) segments. 
-A Shiny application for estimating and ranking possible pairwise genetic relationships is associated with the package.
+# ibdrel
+
+<!-- badges: start -->
+
+<!-- badges: end -->
+
+**ibdrel** is an R package and a Shiny application for estimating and
+rankig pairwise genetic relationships from genomic segments shared
+*identical by descent* (IBD).
 
 ## Installation
 
-ibdRel is currently under development. Missing functionality and issues are to be expected.
+You can install the development version of ibdrel from
+[GitHub](https://github.com/hnordto/ibdrel) with:
 
-To install the latest version from GitHub, use:
-
-```r
-# install.packages("remotes")
-remotes::install_github("hnordto/ibdrel", dependencies = TRUE)
+``` r
+# install.packages("pak")
+pak::pak("hnordto/ibdrel")
 ```
 
-Once the installation is complete, the Shiny application can be launched with:
+## Shiny application
 
-```r
+The **ibdrel** Shiny application can be run as follows:
+
+``` r
 ibdrel::launchApp()
 ```
