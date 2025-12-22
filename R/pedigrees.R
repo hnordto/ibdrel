@@ -1,10 +1,5 @@
-#' Convert a pedigree path degree to possible path lengths
 #'
-#' @param degree An integer: The pedigree (path) degree
-#' @param full Logical: Is the relationship full (TRUE) or half (FALSE)
-#'
-#' @return A DataFrame
-
+#' @export
 degree_to_l = function(degree, full = T) {
 
   l <- data.frame(degree = integer(),
@@ -38,12 +33,8 @@ degree_to_l = function(degree, full = T) {
 
 }
 
-#' Convert multiple path degrees to possible path lengths
 #'
-#' @param min_path_degree An integer: Smallest path degree
-#' @param max_path_degree An integer: Largest path degree
-#'
-#' @return A DataFrame
+#' @export
 identify_path_lengths = function(min_path_degree = 0,
                                  max_path_degree) {
   l <- data.frame(degree = integer(),
@@ -59,7 +50,8 @@ identify_path_lengths = function(min_path_degree = 0,
 
 
 
-
+#'
+#' @export
 listRelationships = function(l_df,
                               ignoreSex = F,
                               ignoreSymmetries = F,
@@ -178,14 +170,17 @@ defineSexPath = function(nSteps, half) {
     sexPaths = NA
   }
 
+  return (sexPaths)
 
 }
 
 sexCombinations = function(sexPathLength, ordered = T) {
-  if (isTRUE(ordered)) {
-    sexes = c("p", "m")
-    combinations = expand.grid(rep(list(sexes), sexPathLength))
-    combinations = apply(combinations, 1, paste, collapse = "")
+  sexes = c("p", "m")
+  combinations = expand.grid(rep(list(sexes), sexPathLength))
+  combinations = apply(combinations, 1, paste, collapse = "")
+  if (isFALSE(ordered)) {
+    combinations.ordered <- sapply(combinations, function(x) paste0(sort(strsplit(x, "")[[1]]), collapse = ""))
+    combinations = unique(combinations.ordered)
   }
 
   return (combinations)
@@ -194,6 +189,9 @@ sexCombinations = function(sexPathLength, ordered = T) {
 strReverse <- function(x)
   sapply(lapply(strsplit(x, NULL), rev), paste, collapse="") # Get the reverse of a stirng, e.g. a sexpat
 
+
+#'
+#' @export
 removeSymmetries <- function(rels.df) {
   rels.df$sexPathRev = strReverse(rels.df$sexPath)
   rels.df <- rels.df[!duplicated(apply(rels.df, 1, function(x)
@@ -205,23 +203,7 @@ removeSymmetries <- function(rels.df) {
 
 # ---- CREATING PEDIGREES ----
 
-swpSx = function(x, ids)
-  swapSex(x, ids, verbose = F)
-
-lin = function(deg, swp = NULL)
-  swpSx(linearPed(deg), swp)
-
-av = function(rem = 1, swp = NULL)
-  swpSx(avuncularPed(removal = rem), swp)
-
-cous = function(deg, rem = 0, swp = NULL)
-  swpSx(cousinPed(deg, removal = rem), swp)
-
-hcous = function(deg, rem = 0, swp = NULL)
-  swpSx(halfCousinPed(deg, removal = rem), swp)
-
-# Need a function for converting sexpaths to swp
-
+#' @export
 identifyLeaves = function(pedigree) {
   leaves = leaves(pedigree)
 
@@ -309,7 +291,7 @@ getSwpSexPath = function(ped, sexPath) {
 }
 
 
-# Should also create a "metadata"-like data frame
+#' @export
 constructPedigrees = function(pedigrees_df) {
 
   pedigrees = list()
@@ -364,16 +346,7 @@ constructPedigrees = function(pedigrees_df) {
 
 }
 
-# Helper functions from verbalisr
-
-vrb = function(x, ids = leaves(x), paths = FALSE, ...) {
-  format(verbalise(x, ids), includePaths = paths, ...)
-}
-
-vrbAbbr = function(x, ids = leaves(x)) {
-  vrb(x, ids, abbreviate = TRUE, simplify = TRUE, cap = FALSE)
-}
-
+#' @export
 annotatePedigree = function(ped, ids = NULL) {
   if (is.null(ids)) {
     leaves = identifyLeaves(ped)
@@ -433,31 +406,7 @@ condenseSexpath <- function(sexpath) {
   }
 }
 
-
-pedigreesMetadata = function(pedlist) {
-
-  nVar = 2
-
-  metadata = matrix(nrow = length(pedlist), ncol = nVar)
-
-  for (i in 1:length(pedlist)) {
-    ped = pedlist[[i]]
-
-    verb = verbalisr::verbalise(ped, ids = identifyLeaves(ped))
-
-    # Only support unilineal relationships as of now
-    relationship = verb[[1]]$rel
-    degree = verb[[1]]$degree
-
-    metadata[i,] = c(relationship, degree)
-  }
-
-  metadata = as.data.frame(metadata)
-  colnames(metadata) = c("relationship", "degree")
-
-  return (metadata)
-}
-
+#' @export
 pedsMetadata = function(pedlist) {
 
   if (is.null(names(pedlist))) {
@@ -506,42 +455,6 @@ pedKinship= function(ped) { # Only supporting unilineal relationships as of now
   ribd::kinship(ped, ids = identifyLeaves(ped))
 }
 
-# Donnelly equivalences ---------
-# A simulation-based approach to identify potential Donnelly-equivalences
-
-groupDonnelly.dep <- function(pedlist, N, seed) {
-  donnelly = list()
-
-  i = 1
-  for (ped in pedlist) {
-    sim = ibdsim2::ibdsim(ped, N = N, seed = seed, ids = identifyLeaves(ped))
-    segments = postprocess.simulation(sim, ped)
-
-    if (i == 1) {
-      donnelly <- append(donnelly, list(segments$length))
-      donnelly.rels <- data.frame(Relationship = verbalisr::verbalise(ped,
-                                                                      ids = identifyLeaves(ped))[[1]]$rel,
-                                  class = factor(1))
-
-    } else {
-      if (list(segments$length) %in% donnelly) {
-        index = which(sapply(donnelly, function(x) identical(x, segments$length)))
-        donnelly.rels <- rbind(donnelly.rels, data.frame(Relationship = verbalisr::verbalise(ped,
-                                                                                             ids = identifyLeaves(ped))[[1]]$rel,
-                                                         class = factor(index)))
-      } else {
-        donnelly <- append(donnelly, list(segments$length))
-        donnelly.rels <- rbind(donnelly.rels, data.frame(Relationship = verbalisr::verbalise(ped,
-                                                                                             ids = identifyLeaves(ped))[[1]]$rel,
-                                                         class = factor(i)))
-      }
-    }
-
-    i = i + 1
-  }
-
-  return (donnelly.rels)
-}
 
 donnellyRep <- function(degree, half) {
 
@@ -576,6 +489,7 @@ donnellyAnnot <- function(degree, half) {
 # Does not work on sex-specific paths
 # Only support unilieal relationships as of now
 # Avuncular and cousin are equal in this setting
+#' @export
 groupDonnelly = function(pedlist, annotation) {
   i = 1
   for (ped in pedlist) {
@@ -659,6 +573,7 @@ is_number <- function(x) grepl("^[0-9]+$", x)
 
 #' Translate a relationship class code on standardized ibdrel format to readable relationships
 #'
+#' @export
 classTranslator <- function(class, resolution) {
 
   dictionary <- list("m" = "maternal",

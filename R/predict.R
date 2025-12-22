@@ -1,4 +1,5 @@
-
+#'
+#'@export
 predict <- function(observed, model,
                     normalize = TRUE, sort = TRUE) {
 

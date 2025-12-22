@@ -1,4 +1,5 @@
-
+#'
+#'@export
 loadData <- function(data = "ibdrel-unilineal",
                      levels = "all") {
   if (length(levels) == 1 && levels == "all") {

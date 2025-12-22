@@ -1,4 +1,6 @@
-
+#'
+#'
+#' @export
 fitModel <- function(data,
                      features = c("count", "total"),
                      cutoff = 7) {

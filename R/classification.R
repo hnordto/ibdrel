@@ -1,3 +1,5 @@
+#'
+#'@export
 prepareFeatures = function(lengthData, featureSel = c("count", "total"), cutoff = 0) {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
@@ -37,6 +39,8 @@ safe_lengths <- function(lst) {
   })
 }
 
+#'
+#'@export
 preparePdfs = function(lengthData, featureSel = c("count", "total"), cutoff = 0, bw = "nrd0") {
   if (cutoff > 0) {
     lengthData = lapply(lengthData, function(v) v[v >= cutoff])
@@ -105,10 +109,8 @@ classProbs = function(obs, pdfuns) {
   logprobs
 }
 
-normalizeClassProbs = function(logprobs) {
-  res = exp(logprobs - matrixStats::logSumExp(logprobs))
-}
-
+#'
+#'@export
 classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
   obs = obs[obs >= cutoff]
 
@@ -127,6 +129,8 @@ classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
   }
 }
 
+#'
+#' @export
 normalizeLikelihoods = function(likelihoods) {
   exp(likelihoods - matrixStats::logSumExp(likelihoods))
 }
@@ -139,6 +143,8 @@ computeCovariance <- function(features) {
   cov(as.data.frame(features), use = "pairwise.complete.obs")
 }
 
+#'
+#'@export
 obsToFeatures <- function(obs, cutoff, featureSel) {
   obs.lst = list()
   obs.lst$obs[[1]] = obs # Same list structure as training data
@@ -226,6 +232,8 @@ LOF <- function(obs, features, orderLst, top_n) {
 
 }
 
+#'
+#'@export
 distance <- function(obs, features, cutoff, featureSel) {
 
   #order.idx <- match(names(orderLst), names(features))
