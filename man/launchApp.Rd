@@ -2,10 +2,16 @@
 % Please edit documentation in R/launchApp.R
 \name{launchApp}
 \alias{launchApp}
-\title{Launch ibdRel}
+\title{Launch the ibdrel app}
 \usage{
 launchApp()
 }
 \description{
-This launchaes the ibdRel shiny applications
+This launches the Shiny application for performing pairwise relationship estimation.
+}
+\examples{
+\dontrun{
+launchApp()
+}
+
 }
