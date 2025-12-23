@@ -5,16 +5,32 @@ predict <- function(observed, model,
 
   pdfs = model$pdfs
 
-  pred = lapply(pdfs, function(x) {
-    classify(observed, x, cutoff = model$cutoff, sort = sort)
+  obs = get_inner_element(observed)
+
+  pred = lapply(pdfs, function(pdf) {
+    res_lst = lapply(obs, function(obs_vec) {
+      classify(obs_vec, pdf, cutoff = model$cutoff, sort = sort)
+    })
+
+    do.call(rbind, res_lst)
   })
 
+
   if (normalize) {
-    pred = lapply(pred, function(x) {
-      normalizeLikelihoods(x)
+    pred = lapply(pred, function(mat) {
+      t(apply(mat, 1, normalizeLikelihoods))
     })
   }
+
 
   return (pred)
 }
 
+
+get_inner_element <- function(x) {
+  if (!is.list(x)) {
+    return(list(x))
+  } else {
+    return(unlist(lapply(x, get_inner_element), recursive = FALSE))
+  }
+}
