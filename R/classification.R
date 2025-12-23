@@ -283,13 +283,13 @@ testClassifier <- function(testsegments,
 
     for (segment in segments) {
       prediction = classify(segment, pdfs, sort = FALSE) # Very important!
-      prediction = normalizeClassProbs(prediction)
+      prediction = normalizeLikelihoods(prediction)
       prediction_top = classify(segment, pdfs, sort = TRUE)[1]
     #  prediction_top = normalizeClassProbs(prediction_top)
 
       pred = metadata |>
-        filter(rel == names(prediction_top)) |>
-        select(agg.level) |>
+        dplyr::filter(rel == names(prediction_top)) |>
+        dplyr::select(agg.level) |>
         as.character()
 
       if (isFALSE(all)) {
@@ -323,8 +323,8 @@ trueClasses <- function(testsegments,
 
   for (i in 1:length(testsegments)) {
     true = metadata |>
-      filter(rel == names(testsegments)[i]) |>
-      select(agg.level) |>
+      dplyr::filter(rel == names(testsegments)[i]) |>
+      dplyr::select(agg.level) |>
       as.character()
 
     truth <- c(truth, rep(true, length(testsegments[[i]])))
