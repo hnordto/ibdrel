@@ -97,9 +97,8 @@ lengthIBD = function(simlist,
 #'
 #'@export
 aggregateSegments = function(segments, metadata, metadata.agg.column) {
-  lookup = metadata |>
-    dplyr::select(rel, !!rlang::sym(metadata.agg.column)) |>
-    tibble::deframe()
+
+  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata)
 
   agg.ids = lookup[names(segments)]
 

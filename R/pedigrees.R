@@ -671,3 +671,18 @@ classTranslator <- function(class, resolution) {
   rel.write <- trimws(rel.write)
   return(rel.write)
 }
+
+#'
+#'@export
+lookupClass = function(class, to, from, metadata) {
+  lookup = metadata |>
+    dplyr::select(from, !!rlang::sym(to)) |>
+    tibble::deframe()
+
+  if (!is.null(class)) {
+    return (lookup[class])
+  } else {
+    return (lookup)
+  }
+
+}
