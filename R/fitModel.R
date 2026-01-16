@@ -1,7 +1,7 @@
 #'
 #'
 #' @export
-fitModel <- function(data,
+fitModel <- function(data = NULL,
                      features = c("count", "total"),
                      cutoff = 7) {
   if (is.null(data)) {
