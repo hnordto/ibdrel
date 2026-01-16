@@ -7,6 +7,10 @@ predict <- function(observed, model,
 
   obs = get_inner_element(observed)
 
+  if (length(obs) > 1 && isTRUE(sort)) {
+    stop("Cannot sort multiple observations, as ranks may differ. Set sort = FALSE.")
+  }
+
   pred = lapply(pdfs, function(pdf) {
     res_lst = lapply(obs, function(obs_vec) {
       classify(obs_vec, pdf, cutoff = model$cutoff, sort = sort)
@@ -26,7 +30,7 @@ predict <- function(observed, model,
   return (pred)
 }
 
-
+# Helper function to retrieve each observation when multiple are inputted
 get_inner_element <- function(x) {
   if (!is.list(x)) {
     return(list(x))
