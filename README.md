@@ -8,7 +8,7 @@
 <!-- badges: end -->
 
 **ibdrel** is an R package and a Shiny application for estimating and
-rankig pairwise genetic relationships from genomic segments shared
+ranking pairwise genetic relationships from genomic segments shared
 *identical by descent* (IBD).
 
 ## Installation
