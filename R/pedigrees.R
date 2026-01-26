@@ -2,6 +2,7 @@
 #' @export
 degree_to_l = function(degree, full = T) {
 
+
   l <- data.frame(degree = integer(),
                   l1 = integer(),
                   l2 = integer())
@@ -12,8 +13,16 @@ degree_to_l = function(degree, full = T) {
     gamma = 0
   }
 
+  # If l1 or l2 = 0, gamma = 0 (special case for lineal rels)
+
   for (l1 in 0:degree) {
-    l2 = degree - l1 + gamma
+
+    if (l1 == 0) {
+      l2 = degree - l1
+    } else {
+      l2 = degree - l1 + gamma
+    }
+
 
     l <- rbind(l, data.frame(degree = degree,
                              l1 = l1,
@@ -22,12 +31,20 @@ degree_to_l = function(degree, full = T) {
   }
 
   for (l2 in 0:degree) {
-    l1 = degree - l2 + gamma
+
+    if (l2 == 0) {
+      l1 = degree - 2
+    } else {
+      l1 = degree - l2 + gamma
+    }
+
 
     l <- rbind(l, data.frame(degree = degree,
                              l1 = l1,
                              l2 = l2))
   }
+
+
 
   return (l)
 
@@ -120,7 +137,7 @@ listRelationships = function(l_df,
         }
       }
     } else {
-      half = F
+      half = NA
       degree = defineDegree(nSteps, half)
       sexPaths = defineSexPath(nSteps, half)
 
@@ -205,7 +222,7 @@ removeSymmetries <- function(rels.df) {
 
 #' @export
 identifyLeaves = function(pedigree) {
-  leaves = leaves(pedigree)
+  leaves = pedtools::leaves(pedigree)
 
   # "Leaves" are not defined for lineal relationships
   if (length(leaves) < 2) {
@@ -326,7 +343,7 @@ constructPedigrees = function(pedigrees_df) {
 
 
     } else {
-      ped = cousinPed(deg = cousDeg, removal = removal, half = half)
+      ped = pedtools::cousinPed(deg = cousDeg, removal = removal, half = half)
 
       if (!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
@@ -479,7 +496,7 @@ donnellyRep <- function(degree, half) {
 
 donnellyAnnot <- function(degree, half) {
   rep <- donnellyRep(degree, half)
-  ped <- cousinPed(degree = rep$cousDeg, removal = rep$removal, half = half)
+  ped <- pedtools::cousinPed(degree = rep$cousDeg, removal = rep$removal, half = half)
   annot <- annotatePedigree(ped)
   annot <- strsplit(annot, "-")[[1]][1] # Remove sexpath, to be appended later
   return (annot)

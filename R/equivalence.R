@@ -34,7 +34,7 @@ pedVariants <- function(ped, ids = identifyLeaves(ped)) {
   cousDeg = if (type == "cousin") min(verb[[1]]$nSteps)-1 else NA
   half = !(verb[[1]]$full)
   removal = verb[[1]]$removal
-  nGen = if(type == "lineal" || type == "avuncular") removal-1 else NA
+  nGen = if(type == "lineal" || type == "avuncular") degree+as.integer(isFALSE(half)) else NA
 
 
   path = ibdrel:::getPath(ped, ids)
@@ -44,11 +44,15 @@ pedVariants <- function(ped, ids = identifyLeaves(ped)) {
   anchors.idx = which(path %in% anchors)
   free.idx = which(path %in% free)
 
-  anchor.comb <- sexCombinations(length(anchors), FALSE)
-  free.comb <- sexCombinations(length(free), FALSE)
+  anchor.comb <- ibdrel:::sexCombinations(length(anchors), FALSE)
+  free.comb <- ibdrel:::sexCombinations(length(free), FALSE)
 
   if (length(free.comb) == 0) {
     free.comb = "m" # Arbitrary
+  }
+
+  if (length(anchor.comb) == 0) {
+    anchor.comb = "m"  # "Arbitrary
   }
 
   nvariants = length(anchor.comb)*length(free.comb)
