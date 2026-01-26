@@ -202,11 +202,13 @@ makeSummaryOutput <- function(data, resolution, selected.class) {
 
 makeOutlierOutput <- function(data, resolution, selected.class) {
 
-  mdists = data[["mdists"]]
-  threshold = data[["mdistthreshold"]]
+  mdists = data[["mdists"]][[resolution]]
+  thresholds = data[["mdistthreshold"]][[resolution]]
 
-  mdist.idx = which(names(mdists[[resolution]]) == selected.class)
-  mdist = mdists[[resolution]][mdist.idx]
+  mdist.idx = which(names(mdists) == selected.class)
+  threshold.idx = which(names(thresholds) == selected.class)
+  mdist = mdists[mdist.idx]
+  threshold = thresholds[threshold.idx]
 
   tagList(
     tags$p(

@@ -51,7 +51,7 @@ inputBoxUI <- function(id) {
                 ),
                 multiple = TRUE),
     numericInput(inputId = NS(id, "cutoff"),
-                 label = "Cutoff",
+                 label = "Match threshold",
                  value = 7, min = 0, step = 1),
 
     # Input
@@ -109,7 +109,7 @@ inputBoxUI <- function(id) {
     h5("Outlier detection"),
     numericInput(
       inputId = NS(id, "outlierThreshold"),
-      label = HTML("&#967;<sup>2</sup> quantile threshold"),
+      label = HTML("Outlier threshold"),
       min = 0,
       max = 1,
       value = 0.95,
@@ -164,8 +164,11 @@ inputBoxServer = function(id, data) {
       data[["obs"]] = obs
 
       data[["mdists"]] = lapply(data[["features"]], function(x) {
-        distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection)
+        l <- distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection,
+                      threshold = input$outlierThreshold)
+        sapply(l, `[[`, "dist")
       })
+
     })
 
     observe({
@@ -179,8 +182,13 @@ inputBoxServer = function(id, data) {
     observe({
       data[["normalize"]] = input$normalizeButton
       data[["chisq"]] = input$outlierThreshold
-      data[["mdistthreshold"]] = qchisq(p = input$outlierThreshold,
-                                       df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
+      data[["mdistthreshold"]] = lapply(data[["features"]], function(x) {
+        l <- distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection,
+                      threshold = input$outlierThreshold)
+        sapply(l, `[[`, "threshold")
+      })
+      #data[["mdistthreshold"]] = qchisq(p = input$outlierThreshold,
+      #                                 df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
       data[["filter"]] = ifelse(input$filterButton, TRUE, FALSE)
       data[["cutoff"]] = input$cutoff
     })

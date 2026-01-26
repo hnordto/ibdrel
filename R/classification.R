@@ -154,13 +154,13 @@ obsToFeatures <- function(obs, cutoff, featureSel) {
   obs.features
 }
 
-computeMahalanobis <- function(features, obs, cutoff, featureSel) {
+computeMahalanobis <- function(features, obs, cutoff, featureSel, threshold) {
 
   features <- as.data.frame(features)
   obs.features <- as.data.frame(obsToFeatures(obs, cutoff, featureSel))
 
   if (nrow(unique(features)) == 1) { # In the case of lineal of degree 1
-    return (NA)
+    return (list(dist = NA, threshold = NA))
   }
 
   #pca <- prcomp(features, center = TRUE, scale. = TRUE)
@@ -175,14 +175,16 @@ computeMahalanobis <- function(features, obs, cutoff, featureSel) {
   covmat <- computeCovariance(features)
 
   if (all(covmat == 0)) { # If PO, covariance is 0 (no variation, always 50% IBD)
-    return (NA)
+    return (list(dist = NA, threshold = NA))
   }
 
   features.colmeans <- colMeans(features)
 
-  mdist <- stats::mahalanobis(obs.features, features.colmeans, covmat, tol = 1e-20)
+  colnames(obs.features) <- colnames(features)
 
-  mdist
+  mdist <- stats::mahalanobis(rbind(features, obs.features), features.colmeans, covmat, tol = 1e-20)
+
+  list(dist = tail(mdist, 1), threshold = quantile(mdist, threshold, names = FALSE))
 
 }
 
@@ -234,13 +236,13 @@ LOF <- function(obs, features, orderLst, top_n) {
 
 #'
 #'@export
-distance <- function(obs, features, cutoff, featureSel) {
+distance <- function(obs, features, cutoff, featureSel, threshold) {
 
   #order.idx <- match(names(orderLst), names(features))
 
   #features <- features[order.idx]
 
-  res = unlist(sapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel)))
+  res = lapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel, threshold))
 
   res
 }

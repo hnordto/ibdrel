@@ -146,7 +146,7 @@ likelihoodTable <- function(data, resolution, session) {
   mdists = data[["mdists"]][[resolution]]
   filter = data[["filter"]]
   normalize = data[["normalize"]]
-  threshold = data[["mdistthreshold"]]
+  threshold = data[["mdistthreshold"]][[resolution]]
 
   metadata = data[["metadata"]]
 
@@ -164,6 +164,7 @@ likelihoodTable <- function(data, resolution, session) {
   #classlabels <- sapply(names(likelihoods), ibdrel::classTranslator, resolution)
 
   mdists <- mdists[names(likelihoods)] # Sorted mdists
+  threshold <- threshold[names(likelihoods)] # Sorter outlier thresholds
   isoutlier <- mdists < threshold
 
   metadata.subset <- metadata[metadata$class %in% names(likelihoods),]
