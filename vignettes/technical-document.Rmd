@@ -1,0 +1,89 @@
+---
+title: "Technical document"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Technical document}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+`ibdrel` performs probabilistic classification of pairwise genetic relationships based on *identity-by-descent (IBD)* sharing. The software does so by fitting a model to simulated IBD sharing data for a range of relationship classes. For an input IBD sharing (observation), `ibdrel` estimates likelihoods for all relationship classes included in the model. These are values quantifying how likely each relationship class is given the observation. 
+
+
+## Data
+
+Relationship classes (or simply classes) are labels denoting specific genetic relationships. Classes can be detailed pedigree relationships, or other measurements of relatedness such as different relatedness coefficients. 
+
+A feature is a type of IBD measurement extracted from the set of individual segments passed to `ibdrel`. Typical features can be the total length of the segments, the number of segments, or quantile-based measurements of segment lengths. Values of the features are the data used by `ibdrel`.
+
+## Statistical model
+
+The main goal behind `ibdrel` is achieved by computing the probability of the observed data given specific relationship classes, $\text{Pr}\left(\text{IBD data}|\text{Class}\right)$. Since this is a measure of how likely the data are under various classes, it is informative about which relationship the sharing may originate from. Specifically, `ibdrel` implements a non-parametric Naive Bayes classifier. Details are described in this section.
+
+Under the hood, an `ibdrel` model is a set of probability density functions (PDFs) describing how likely different values of a feature are for any included class. As such, there are one PDF for each combination of a class and a feature. The PDFs are estimated from simulated data, and thus carry information about how the features behave for the different classes. When classifying a new observation, the PDFs for all features in a class is evaluated, and combined to a class-specific likelihood describing how likely the data is given that class.
+
+The next subsections explain this principle mathematically. Denote the $K$ relationship classes in the model by $C_1,...,C_K$, and the $D$ features with $\mathbf{X}=X_1,...,X_D$.
+
+### Estimating likelihoods
+
+The likelihood of the observed data given a specific class is $\text{Pr}(\mathbf{x}|C_k)$ for $k=1,...,K$. Each feature $x_d$, $d=1,..,D$, have a class-specific PDF expressing $\text{Pr}(x_d|C_k)$. Assuming that the features are class-conditionally independent (independent given the classes), the likelihood decomposes into a product:
+
+$$
+\text{Pr}(\mathbf{x}|C_k)=\prod_{d=1}^{D} \text{Pr}(x_d|C_k)
+$$
+
+The PDFs expressing $\text{Pr}(x_d|C_k)$ are estimated from simulated training data. For each class in the model, features are extracted from simulated instances of IBD sharing obtained with `ibdsim2::ibdsim()`. PDFs are estimated by Kernel Density Estimation (KDE), using the function `stats::density()`:
+
+$$
+\hat{f}_{X_{d}|C_{k}}(x) = \frac{1}{n_{k}h_{k,d}} \sum_{j=1}^{n_{k}}K \left( \frac{x-x_{j,d}^{(k)}}{h_{k,d}} \right) 
+$$
+Here, $n_k$ are the number of simulated matches in class $C_k$, $x_{j,d}^{(k)}$ denotes the value of feature $d$ for the $j$-th training sample in class $C_k$, and $h_{k,d}$ is the bandwidth for class $C_k$ and feature $d$. $K(\cdot)$ denotes the kernel function. By default, the Gaussian kernel and Silverman's rule-of-thumb bandwidth selector are chosen.
+
+### Classification
+
+Once the likelihood is obtained for all classes, Bayes' theorem is applied to compute the posterior probability $\text{Pr}(C_k|\mathbf{x})$:
+
+$$
+\text{Pr}(C_{k}|\mathbf{x})=\frac{\text{Pr}(C_{k})\text{Pr}(\mathbf{x}|C_{k})}{\text{Pr}(\mathbf{x})}
+$$
+
+Here, $\text{Pr}(C_k)$ is the prior probability of each class, while $\text{Pr}(\mathbf{x})$ is the normalization constant computed as $\text{Pr}(\mathbf{x})=\sum_{k=1}^K\text{Pr}(C_k)\text{Pr}(\mathbf{x}|C_k)$. Since this is constant over all classes, the posterior probability is proportional to the prior times the likelihood:
+
+$$
+\text{Pr}(C_{k}|\mathbf{x}) \propto \text{Pr}(C_{k})\text{Pr}(\mathbf{x}|C_{k})
+$$
+By default, all classes are assumed to be equally likely *a priori*, so the prior $\text{Pr}(C_k)$ is taken to be uniform. The posterior probability is then proportional to the likelihood:
+
+$$
+\text{Pr}(C_{k}|\mathbf{x}) \propto\text{Pr}(\mathbf{x}|C_{k})
+$$
+The derivation shows that the unnormalized likelihood $\text{Pr}(\mathbf{x}|C_k)$ is a quantity representative of the posterior probability of interest for the classification problem at hand. Specifically, this is called Naive Bayes classification.
+
+Since the prior is constant with respect to the classes, it cancels out in the numerator and denominator of Bayes' theorem. Then, the exact posterior probability (under the model and its assumptions) is the unnormalized likelihood divided by the sum of unnormalized likelihoods over all classes. This quantity is called the normalized likelihood.
+
+$$
+\text{Pr}(C_{k}|\mathbf{x})=\frac{\text{Pr}(\mathbf{x}|C_{k})}{\sum_{k=1}^K\text{Pr}(\mathbf{x}|C_k)}
+$$
+
+## Outlier detection
+
+Outliers are data points that do not match the general pattern in the data. In this context, outliers are observations that do not fit the simulated data used to fit the model. The outlier detection consists of measuring how far the observation is from the two-dimensional data cloud of total segment lengths and segment numbers from simulated data. This is measured for each class using Mahalanobis distance. Mahalanobis distance measures the distance from the observation to the center of the data cloud, taking the shape (covariance) of the cloud into account. Mathematically, it is defined as:  
+
+$$
+D^2 = (\mathbf{x}-\mathbf{m})^T \cdot C^{-1} \cdot (\mathbf{x}-\mathbf{m})
+$$
+
+Here, $D^2$ is the squared Mahalanobis distance, $\mathbf{x}$ is the observed values of total segment length and number of segments, $\mathbf{m}$ is the mean values of total segment length and number of segments for the simulated data, and $C^{-1}$ is the estimated covariance between the two variables. Computations are handled by `stats::mahalanobis()`.
+
+The computed distances are compared against the quantiles of a chi-square ($\chi^2$) distribution with degrees of freedom equal to the number of variables used for outlier detection. 
+
+However, multivariate normal distributions

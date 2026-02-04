@@ -1,0 +1,62 @@
+---
+title: "ibdrel-r"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ibdrel-r}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Basic usage
+
+The default model, `ibdrel-unilineal` is loaded using the `fitModel()` function, with `data = NULL`. Features and match threshold values are set using the `features` and `cutoff` arguments. In the following example, the default model is used to classify an artifical example of IBD sharing (segment lengths).
+
+```{r setup}
+library(ibdrel)
+
+model = fitModel()
+
+
+```
+
+### Example:
+
+
+### Example: Simulated SNP data from a pair of first cousins
+
+As a second example 
+
+```{r comment=NA, warning=F}
+library(pedtools)
+library(ibdsim2)
+library(ibdfindr)
+
+x = cousinPed(1) |> distributeMarkers(n = 50000)
+sim = ibdsim(x, seed = 123, verbose = FALSE)
+y = profileSimIBD(x, sim, ids = leaves(x), seed = 123)
+
+ibd = findIBD(y)
+```
+
+Segments can be converted to a list compatible with `ibdrel` using the function `ibdfindr2ibdrel()`.
+
+
+```{r}
+segments = ibdfindr2ibdrel(ibd)
+
+pred = predict(segments, model)
+
+pred
+
+```
+
+
+
+## Building

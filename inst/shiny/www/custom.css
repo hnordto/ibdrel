@@ -8,8 +8,9 @@
 }
 
 .table-box {
-  height: 500px;
+  height: 600px;
   overflow-y: auto;
+  overflow-x: auto;
 }
 
 .highlight-row { background-color: #ffeaa7 !important; }
@@ -17,4 +18,18 @@
 
 .main-container {
   font-size: 0.8rem;
+}
+
+.helpbox {
+  max-height: 96%!important;;
+  padding-top: 0rem!important;
+  padding-bottom: 0.4rem!important;
+}
+
+.helpbox p {
+  font-size: .95rem!important;
+  font-weight: 500!important;
+  text-align: justify!important;
+  line-height: 1.5rem!important;
+  margin-bottom: 1rem!important;
 }

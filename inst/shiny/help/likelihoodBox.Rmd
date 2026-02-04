@@ -2,8 +2,33 @@
 output: html_fragment
 ---
 
-Based on inputted IBD data, the likelihood is computed as $\text{Pr}(\text{IBD data}|\text{Class})$. In other words, the likelihood is the estimated probability of the observed IBD sharing given the classes. Higher values indicates that the observed data is more likely under the specified class compared to classes with lower values.
+**Likelihood table**
 
-The un-normalized likelihood is defined as $\log \{  \text{Pr}(\text{IBD data}|\text{Class}) \}$. This is a measurement independent of the number of classes, and express the likelihood (on the log-scale) for a single class. The value is proportional to $\text{Pr}(\text{Class}|\text{IBD data})$, and is thus a measurement of how likely a class is given the observed data under the modeling assumptions (see "statistical foundation").
+Displays the pairwise relationship prediction for the inputted IBD sharing.
 
-The normalized likelihood is computed by scaling all likelihoods (over all classes) so that they sum to one. This creates a discrete probability distribution over all classes, quantifying the probabilities of the classes given the observed data. Each value is also a quantity informative about $\text{Pr}(\text{Class}|\text{IBD data})$, but scaled to the finite number of classes present in the model. Under default model conditions, the normalized likelihoods over all classes is the exact discrete posterior probability distribution of classes given the IBD data (see "statistical foundations: special case"). Same model assumptions as for the un-normalized likelihoods apply.
+Each row corresponds to a predicted genetic relationship class. Columns:
+
+- Rank
+- __Outlier detection__: Whether the input matches the general pattern observed in simulated data, in terms of total sharing and number of segments:
+  + &#9989; if input is *not* an outlier. 
+  + &#10060; if input is an outlier.
+- __Class__: Name of the relationship.
+- __Lik__: Estimated likelihood of the relationship:
+  + Normalized: Probability of the class given the input IBD data.
+  + Unnormalized: Probability of the input IBD data given the class. Reported on natural log scale. 
+
+Additional columns display additional information about the class if applicable, such as kappa coefficients, kinship coefficients, and relationship degree.
+
+**Tab panels**
+
+Prediction is carried out at different resolutions, with distinct sets of predicted classes:
+
+- `Ped`: Pedigree relationships *with* sex-specific ancestral paths up to equivalence. Equivalent relationships are those that are indistinguishable in terms of pairwise IBD sharing. One representative for each equivalence group is displayed.
+- `Rel`: Pedigree relationships *without* sex-specific ancestral paths up to equivalence. Equivalent relationships are those that are indistinguishable in terms of pairwise IBD sharing. One representative for each equivalence group is displayed.
+- `Kap`: The kappa coefficients for the relationship. These are the expected probabilities of sharing 0, 1, or 2 alleles IBD at a locus. 
+- `Kin`: The kinship coefficient for the relationship. This is the probability that two alleles chosen randomly from the two individuals are IBD.
+- `Deg`: The relationship degree.
+
+**Details**
+
+More information can be found in the onlie documentation or the `ibdrel` package vignettes.

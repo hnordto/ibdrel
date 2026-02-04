@@ -1,0 +1,90 @@
+pkd---
+title: "ibdrel"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ibdrel}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+## Introduction
+
+The goal of `ibdrel` is to estimate how likely various relationship classes between two individuals are based on *identity-by-descent (IBD)* segments. Relationship classes can be specific pedigree relationships, or other measurements of genetic relatedness, such as relatedness coefficients and relationship degrees. This is achieved using a model carrying information about patterns in IBD sharing for the included relationship classes. Technical details are provided in `vignette('technical-document')`. 
+
+## Usage
+
+There are two ways to use `ibdrel`:
+
+- Through an interactive user interface built with [`Shiny`](https://shiny.posit.co/).
+- As an `R` package.
+
+Basic usage in the latter case is covered in `vignette('ibdrel-r')`.
+
+The `Shiny` application is launched with the following command:
+
+```{r eval = F}
+ibdrel::launchApp()
+```
+
+Once a model has been specified (see below), the input to `ibdrel` is a set of IBD segment lengths in centiMorgans (cM) reported from a genetic match between two individuals. Such a match is a result of an IBD detection analysis, either run by the user or provided by a direct-to-consumer (DTC) genetic testing service.  
+
+## Specifying a model and choosing parameters
+
+`ibdrel` uses a classification model to estimate how likely different relationship classes are given the input IBD sharing.
+
+The default model `ibdrel-unilineal` consists of IBD sharing data simulated from 156 unilineal relationships.
+
+### Features
+
+Various measurements of IBD extracted from the sets of segment lengths from a match are used to build  models and perform classification. Types of measurements are referred to as features. By default, `ibdrel` uses the total segment length and the number of segments in a match as input. Additional features like shortest segment, longest segment, and median segment length are available.
+
+It is recommended to use `count` and `total` (default), as adding more features may lead to poorer performance.
+
+### Match threshold
+
+The match threshold defines the minimum segment length for a segment to be considered IBD.
+
+The value should be set in accordance with the IBD detection approach used. Consult the recommendations provided by the relevant service and/or software used. Defaults to 7 centiMorgan (cM). More details can be found on the [ISOGG Wiki](https://isogg.org/wiki/Autosomal_DNA_match_thresholds).
+
+In general, the match threshold should be increased when fewer markers are used.
+
+### Outlier threshold
+
+
+
+
+## Understanding the output
+
+`ibdrel` reports two closely related probabilities for each relationship class:
+
+- The normalized likelihood (posterior probability): $\text{Pr}\left(\text{Class}|\text{IBD data}\right)$, expressing how likely each class is, given the observed data.
+- The unnormalized likelihood: $\text{Pr}\left(\text{IBD data}|\text{Class}\right)$, expressing how likely the data is, given the classes. Reported on the natural log scale.
+
+`ibdrel` carries out classification at different class resolutions with different relationship classes. Currently five levels are implemented^[Labels used in the `R` package: `eqclass.detailed`, `eqclass`, `kappa`, `kinship`, `degree`]:
+
+- `Ped`: Pedigree relationships *with* sex-specific ancestral paths up to equivalence[^equivalence].
+- `Rel`: Pedigree relationships *without* sex-specific ancenstral paths up to equivalence[^equivalence].
+- `Kap`: The kappa coefficients for the relationship. These are the expected proabilities of sharing 0, 1, or 2 alleles IBD at a locus.
+- `Kin`: The kinship coefficient for the relationship. This is the probability that two alleles chosen randomly from the two individuals are IBD.
+- `Deg`: The relationship degree.
+
+[^equivalence]: Equivalence refers to the fact that some relationships have identical IBD sharing distributions. Two equivalent relationships are indistinguishable in terms of information on pairwise IBD sharing. The most detailed resolutions are therefore only possible up to equivalence, as all relationships within an equivalence group are equally likely.
+
+Note: Neither the likelihood nor $\text{Pr}\left(\text{Class}|\text{IBD data}\right)$ should be interpreted as true, independent probabilities. They are always dependent on the model and its assumptions.
+
+### Outlier detection
+
+`ibdrel` checks if the observation is an outlier for each relationship class:
+
+- &#9989; if observation is *not* an outlier. 
+- &#10060; if observation is an outlier.
+
+An observation is flagged as an outlier for a relationship class if they do not match simulated sharing data in terms of number of segments and total segment length. Outliers are useful to check how well an observation fits simulated data for each relationship class. For instance, an observation can be ranked with the highest posterior probability but still be flagged as an outlier if no relationship classes in the model fits the data well. Outliers can be visually inspected by looking at the IBD segment distribution plot.

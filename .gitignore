@@ -5,3 +5,5 @@
 *.png
 *.pdf
 notes/
+inst/doc
+docs
