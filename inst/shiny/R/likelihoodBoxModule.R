@@ -51,7 +51,7 @@ likelihoodBoxUI = function(id) {
       ),
 
       tabPanel(
-        title = "Kappa",
+        title = "Kap",
         value = "kappa",
         div(
           class = "table-box",
@@ -60,7 +60,7 @@ likelihoodBoxUI = function(id) {
       ),
 
       tabPanel(
-        title = "Kinship",
+        title = "Kin",
         value = "kinship",
         div(
           class = "table-box",
@@ -69,7 +69,7 @@ likelihoodBoxUI = function(id) {
       ),
 
       tabPanel(
-        title = "Degree",
+        title = "Deg",
         value = "degree",
         div(
           class = "table-box",
@@ -131,7 +131,8 @@ likelihoodBoxServer = function(id, data) {
         html = TRUE,
         text = read_file("help/likelihoodBox.html"),
         showConfirmButton = FALSE,
-        closeOnClickOutside = TRUE
+        closeOnClickOutside = TRUE,
+        size = "m"
       )
     })
 
@@ -184,6 +185,8 @@ likelihoodTable <- function(data, resolution, session) {
   kappa0 = as.character(MASS::fractions(metadata.subset$kappa0))
   kappa1 = as.character(MASS::fractions(metadata.subset$kappa1))
   kappa2 = as.character(MASS::fractions(metadata.subset$kappa2))
+
+  kappa = as.character(paste0("(",kappa0, ",", kappa1, ",", kappa2, ")"))
   kinship = as.character(MASS::fractions(metadata.subset$kinship))
   degree = as.character(metadata.subset$degree)
 
@@ -193,15 +196,22 @@ likelihoodTable <- function(data, resolution, session) {
                    Class = names(likelihoods),
                    Likelihood = round(likelihoods, 2))
 
-  if (resolution == "eqclass.detailed" || resolution == "eqclass") {
+  if (resolution == "eqclass.detailed") {
     df <- cbind(df,
-                Kappa0 = kappa0,
-                Kappa1 = kappa1,
-                Kappa2 = kappa2,
+                Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[5:8] <- c("\u03BA\u2080", "\u03BA\u2081", "\u03BA\u2082", "\u03C6")
+    colnames(df)[5:6] <- c("\u03BA", "\u03C6")
     class_rename = "Ped"
+  }
+
+  if (resolution == "eqclass") {
+    df <- cbind(df,
+                Kappa = kappa,
+                Kinship = kinship,
+                Degree = degree)
+    colnames(df)[5:6] <- c("\u03BA", "\u03C6")
+    class_rename = "Rel"
   }
 
   if (resolution == "kappa") {
@@ -248,10 +258,22 @@ likelihoodTable <- function(data, resolution, session) {
         )
       }
     ) |>
+    tab_options(data_row.padding = px(1),
+                container.padding.y = px(3),
+                table.font.size = "100%",
+                table.layout = "auto",
+                table.additional_css = ".gt_table {width: max-content !important}") |>
     tab_style(
       style = cell_fill(color = "forestgreen", alpha = .25),
       locations = cells_body(columns = c(Class, Likelihood))
     ) |>
+    tab_style(
+      style = cell_text(size = pct(105)),
+      locations = cells_column_labels()
+    ) |>
+    tab_style(style = cell_text(whitespace = "nowrap",
+                                align = "center"),
+              locations = list(cells_body(), cells_column_labels())) |>
 
     tab_options(
       data_row.padding = px(1),
@@ -259,19 +281,20 @@ likelihoodTable <- function(data, resolution, session) {
     ) |>
 
     cols_width(
-      Rank ~ "2em",
-      Outlier ~ "2em",
-      Class ~ "15em",
-      Likelihood ~ "5em",
-      everything() ~ "3em"
+      Rank ~ pct(5),
+      Outlier ~ pct(5),
+      Class ~ pct(30),
+      Likelihood ~ pct(10),
+      everything() ~ pct(5)
     ) |>
 
     cols_label(
       Rank = "",
       Outlier = "",
-      Class = class_rename,
+     # Class = class_rename,
       Likelihood = "Lik"
-    )
+    ) |>
+    gt_theme_538(quiet = TRUE)
 
   session$onFlushed(function() {
     session$sendCustomMessage(
