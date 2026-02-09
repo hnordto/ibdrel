@@ -19,7 +19,7 @@ ibdSimulations = function(pedlist,
   }
 
   if (is.null(seed)) {
-    seeds = seq(1:length(pedlist))
+    seeds = rep(NULL, length(pedlist))
   } else {
     seeds = seed
   }
