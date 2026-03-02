@@ -15,6 +15,8 @@ degree_to_l = function(degree, full = T) {
 
   # If l1 or l2 = 0, gamma = 0 (special case for lineal rels)
 
+
+
   for (l1 in 0:degree) {
 
     if (l1 == 0) {
@@ -33,7 +35,7 @@ degree_to_l = function(degree, full = T) {
   for (l2 in 0:degree) {
 
     if (l2 == 0) {
-      l1 = degree - 2
+      l1 = degree - l2
     } else {
       l1 = degree - l2 + gamma
     }
