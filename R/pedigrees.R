@@ -127,32 +127,57 @@ listRelationships = function(l_df,
 
         sexPaths = defineSexPath(nSteps, half)
 
-        for (sexPath in sexPaths) {
+        if(isFALSE(ignoreSex)) {
+          for (sexPath in sexPaths) {
+            rels_tmp = data.frame(type = type,
+                                  degree = degree,
+                                  removal = removal,
+                                  nGen = nGen,
+                                  cousDeg = cousDeg,
+                                  half = half,
+                                  sexPath = sexPath)
+            rels = rbind(rels, rels_tmp)
+          }
+        } else {
           rels_tmp = data.frame(type = type,
                                 degree = degree,
                                 removal = removal,
                                 nGen = nGen,
                                 cousDeg = cousDeg,
                                 half = half,
-                                sexPath = sexPath)
+                                sexPath = NA)
           rels = rbind(rels, rels_tmp)
         }
+
       }
     } else {
       half = NA
       degree = defineDegree(nSteps, half)
       sexPaths = defineSexPath(nSteps, half)
 
-      for (sexPath in sexPaths) {
+      if(isFALSE(ignoreSex)) {
+        for (sexPath in sexPaths) {
+          rels_tmp = data.frame(type = type,
+                                degree = degree,
+                                removal = removal,
+                                nGen = nGen,
+                                cousDeg = cousDeg,
+                                half = NA,
+                                sexPath = sexPath)
+          rels = rbind(rels, rels_tmp)
+        }
+      } else {
         rels_tmp = data.frame(type = type,
                               degree = degree,
                               removal = removal,
                               nGen = nGen,
                               cousDeg = cousDeg,
                               half = NA,
-                              sexPath = sexPath)
+                              sexPath = NA)
         rels = rbind(rels, rels_tmp)
       }
+
+
 
 
     }
@@ -325,7 +350,7 @@ constructPedigrees = function(pedigrees_df) {
     half = as.logical(pedigrees_df[i, "half"])
 
     if (type == "lineal") {
-      ped = linearPed(nGen)
+      ped = linearPed(removal)
 
 
       if(!(is.na(sexPath))) {

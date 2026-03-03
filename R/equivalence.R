@@ -25,13 +25,13 @@ anchor <- function(ped, ids = ibdrel:::identifyLeaves(ped)) {
 
 #'
 #' @export
-pedVariants <- function(ped, ids = identifyLeaves(ped)) {
+pedVariants <- function(ped, ids = identifyLeaves(ped), onlyExtremes = FALSE) {
 
   verb <- verbalisr::verbalise(ped, ids)
 
   type <- verb[[1]]$type
   degree = verb[[1]]$degree
-  cousDeg = if (type == "cousin") min(verb[[1]]$nSteps)-1 else NA
+  cousDeg = if (type == "cousin" || type == "sibling") min(verb[[1]]$nSteps)-1 else NA
   half = !(verb[[1]]$full)
   removal = verb[[1]]$removal
   nGen = if(type == "lineal" || type == "avuncular") degree+as.integer(isFALSE(half)) else NA
@@ -59,7 +59,6 @@ pedVariants <- function(ped, ids = identifyLeaves(ped)) {
 
 
 
-
   variants = matrix(NA, nrow = nvariants, ncol = 7)
 
   i = 1
@@ -75,6 +74,11 @@ pedVariants <- function(ped, ids = identifyLeaves(ped)) {
       sexPath[free.idx] = free.sexes.split
       sexPath = paste(sexPath, collapse = "")
 
+      if (identical(strsplit(sexPath, "")[[1]], character(0))) {
+        sexPath = NA
+      }
+
+
       variants[i,] = c(type, degree, removal, nGen, cousDeg, half, sexPath)
       i = i + 1
     }
@@ -84,6 +88,12 @@ pedVariants <- function(ped, ids = identifyLeaves(ped)) {
   colnames(variants) <- c("type", "degree", "removal", "nGen", "cousDeg", "half",
                           "sexPath")
   variants = as.data.frame(variants)
+
+  if (isTRUE(onlyExtremes)) {
+    extreme.idx = which(sapply(variants$sexPath, function(s) length(unique(strsplit(s, "")[[1]])) == 1))
+    variants = variants[extreme.idx,]
+  }
+
   return (variants)
 
 
