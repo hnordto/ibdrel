@@ -12,7 +12,9 @@ ibdSimulations = function(pedlist,
                            seed = NULL,
                            ids = NULL,
                            map = "decode19",
-                           model = "chi") {
+                           model = "chi",
+                           keep = "everything",
+                           cutoff = 0) {
 
   if (!(length(seed) == length(pedlist) | length(seed) == 1 | is.null(seed))) {
     stop("Seed must either be of length ",length(pedlist), " or 1")
@@ -25,23 +27,68 @@ ibdSimulations = function(pedlist,
   }
 
   simulations = list()
-  for (i in 1:length(pedlist)) {
 
-    ped = pedlist[[i]]
-    seed = seeds[i]
+  if (keep == "everything") {
 
-    if (is.null(ids)) { # Currently only supporting pedigrees with natural "leaves"
-      ids = identifyLeaves(ped)
+    for (i in 1:length(pedlist)) {
+
+      ped = pedlist[[i]]
+      seed = seeds[i]
+
+      if (is.null(ids)) { # Currently only supporting pedigrees with natural "leaves"
+        ids = identifyLeaves(ped)
+      }
+
+      simulation = ibdsim2::ibdsim(x = ped, N = N, seed = seed,
+                                   ids = ids, map = map, model = model)
+
+      simulations = append(simulations, list(simulation), after = length(simulations))
+
+      ids = NULL
+
     }
+  } else if (keep == "nonzero") {
 
-    simulation = ibdsim2::ibdsim(x = ped, N = N, seed = seed,
-                                 ids = ids, map = map, model = model)
+    seedlst = list()
 
-    simulations = append(simulations, list(simulation), after = length(simulations))
+    for (i in 1:length(pedlist)) {
 
-    ids = NULL
+      nonzero = 0
 
+      ped = pedlist[[i]]
+
+      if (is.null(ids)) {
+        ids = identifyLeaves(ped)
+      }
+
+      simulations_tmp = list()
+
+      while (nonzero < N) {
+
+        trySeed = sample(1:10000000,1)
+
+        simulation = ibdsim2::ibdsim(x = ped, N = 1, seed = trySeed,
+                                     ids = ids, map = map, model = model,
+                                     verbose = FALSE)
+        segments = ibdsim2::findPattern(simulation, pattern = list(carriers = ids),
+                                        cutoff = cutoff, unit = "cm")
+
+        if (nrow(segments) > 0) {
+          simulation = list(simulation)
+          names(simulation) = trySeed
+          simulations_tmp = append(simulations_tmp, simulation, after = length(simulations_tmp))
+          nonzero = nonzero + 1
+        }
+
+      }
+
+      simulations = append(simulations, list(simulations_tmp), after = length(simulations_tmp))
+
+      ids = NULL
+    }
   }
+
+
 
   return (simulations)
 
