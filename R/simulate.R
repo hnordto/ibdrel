@@ -82,7 +82,7 @@ ibdSimulations = function(pedlist,
 
       }
 
-      simulations = append(simulations, list(simulations_tmp), after = length(simulations_tmp))
+      simulations = append(simulations, list(simulations_tmp), after = length(simulations))
 
       ids = NULL
     }
@@ -121,6 +121,7 @@ lengthIBD = function(simlist,
                      cutoff = 0) {
 
   segmentLst = list()
+
 
   for (i in 1:length(simlist)) {
     sim = simlist[[i]]
