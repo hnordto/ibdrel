@@ -14,7 +14,8 @@ ibdSimulations = function(pedlist,
                            map = "decode19",
                            model = "chi",
                            keep = "everything",
-                           cutoff = 0) {
+                           cutoff = 0,
+                           max_iter = 5000) {
 
   if (!(length(seed) == length(pedlist) | length(seed) == 1 | is.null(seed))) {
     stop("Seed must either be of length ",length(pedlist), " or 1")
@@ -63,6 +64,7 @@ ibdSimulations = function(pedlist,
 
       simulations_tmp = list()
 
+      n_iter = 1
       while (nonzero < N) {
 
         trySeed = sample(1:10000000,1)
@@ -78,6 +80,12 @@ ibdSimulations = function(pedlist,
           names(simulation) = trySeed
           simulations_tmp = append(simulations_tmp, simulation, after = length(simulations_tmp))
           nonzero = nonzero + 1
+        }
+
+        n_iter = n_iter + 1
+
+        if (n_iter >= max_iter) {
+          break
         }
 
       }
