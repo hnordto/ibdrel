@@ -168,3 +168,12 @@ aggregateSegments = function(segments, metadata, metadata.agg.column) {
   return (aggregatedSegments)
 }
 
+#'
+#'@export
+removeSegments <- function(lengthData, keepZero = TRUE, cutoff = 7) {
+  lengthData = lapply(lengthData, function(v) v[v >= cutoff])
+  if (isFALSE(keepZero)) {
+    lengthData <- lengthData[lapply(lengthData, length) > 0]
+  }
+  return(lengthData)
+}
