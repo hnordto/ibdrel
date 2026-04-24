@@ -11,6 +11,8 @@
 ranking pairwise genetic relationships from genomic segments shared
 *identical by descent* (IBD).
 
+The IBDrel application is available online: [https://hnordto.shinyapps.io/IBDrel/](https://hnordto.shinyapps.io/IBDrel/) 
+
 ## Installation
 
 You can install the development version of ibdrel from
