@@ -15,18 +15,22 @@ Depends:
   R (>= 4.1)
 Imports:
   shiny,
+  pedtools,
+  verbalisr,
+  ribd,
   ibdsim2,
   ggplot2,
+  dplyr,
+  purrr,
+  MASS,
+  rlang,
+  tibble,
   bs4Dash,
   gt,
-  DT,
   scales,
   matrixStats,
   stringr,
-  verbalisr,
-  pedtools,
-  gtExtras,
-  dplyr
+  gtExtras
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
@@ -35,3 +39,5 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+Remotes:
+  hnordto/ibdrel

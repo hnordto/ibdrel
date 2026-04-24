@@ -34,32 +34,9 @@ The `Shiny` application is launched with the following command:
 ibdrel::launchApp()
 ```
 
-Once a model has been specified (see below), the input to `ibdrel` is a set of IBD segment lengths in centiMorgans (cM) reported from a genetic match between two individuals. Such a match is a result of an IBD detection analysis, either run by the user or provided by a direct-to-consumer (DTC) genetic testing service.  
+## Input
 
-## Specifying a model and choosing parameters
-
-`ibdrel` uses a classification model to estimate how likely different relationship classes are given the input IBD sharing.
-
-The default model `ibdrel-unilineal` consists of IBD sharing data simulated from 156 unilineal relationships.
-
-### Features
-
-Various measurements of IBD extracted from the sets of segment lengths from a match are used to build  models and perform classification. Types of measurements are referred to as features. By default, `ibdrel` uses the total segment length and the number of segments in a match as input. Additional features like shortest segment, longest segment, and median segment length are available.
-
-It is recommended to use `count` and `total` (default), as adding more features may lead to poorer performance.
-
-### Match threshold
-
-The match threshold defines the minimum segment length for a segment to be considered IBD.
-
-The value should be set in accordance with the IBD detection approach used. Consult the recommendations provided by the relevant service and/or software used. Defaults to 7 centiMorgan (cM). More details can be found on the [ISOGG Wiki](https://isogg.org/wiki/Autosomal_DNA_match_thresholds).
-
-In general, the match threshold should be increased when fewer markers are used.
-
-### Outlier threshold
-
-
-
+The input to `ibdrel` is a set of IBD segment lengths in centiMorgans (cM) corresponding to a genetic match between two individuals. Such a match is the output of an IBD detection analysis, either run by the user or provided by a direct-to-consumer (DTC) genetic testing service. 
 
 ## Understanding the output
 
@@ -87,4 +64,32 @@ Note: Neither the likelihood nor $\text{Pr}\left(\text{Class}|\text{IBD data}\ri
 - &#9989; if observation is *not* an outlier. 
 - &#10060; if observation is an outlier.
 
-An observation is flagged as an outlier for a relationship class if they do not match simulated sharing data in terms of number of segments and total segment length. Outliers are useful to check how well an observation fits simulated data for each relationship class. For instance, an observation can be ranked with the highest posterior probability but still be flagged as an outlier if no relationship classes in the model fits the data well. Outliers can be visually inspected by looking at the IBD segment distribution plot.
+An observation is flagged as an outlier for a relationship class if they do not match simulated sharing data in terms of number of segments and total segment length. Outliers are useful to check how well an observation fits simulated data for each relationship class. For instance, an observation can be ranked with the highest posterior probability but still be flagged as an outlier if no relationship classes in the model fits the data well. Outliers can be visually inspected by looking at the IBD segment distribution plot. They are computed using a distance-based metric, comparing the distance from the observation to the "center" of the simulated data with the distances from each simulated data point to the same center. 
+
+## Settings
+
+`ibdrel` uses a classification model to estimate how likely different relationship classes are given the input IBD sharing.
+
+The default model `ibdrel-unilineal` consists of IBD sharing data simulated from 156 unilineal relationships.
+
+### Features
+
+Various measurements of IBD extracted from the sets of segment lengths from a match are used to build  models and perform classification. Types of measurements are referred to as features. By default, `ibdrel` uses the total segment length and the number of segments in a match as input. Additional features like shortest segment, longest segment, and median segment length are available.
+
+It is recommended to use `count` and `total` (default), as adding more features may lead to poorer performance.
+
+### Match threshold
+
+The match threshold defines the minimum segment length for a segment to be considered IBD.
+
+The value should be set in accordance with the IBD detection approach used. Consult the recommendations provided by the relevant service and/or software used. Defaults to 7 centiMorgan (cM). More details can be found on the [ISOGG Wiki](https://isogg.org/wiki/Autosomal_DNA_match_thresholds).
+
+In general, the match threshold should be increased when fewer markers are used.
+
+### Outlier threshold
+
+The outlier threshold specifies the quantile of distances from the simulated data to the center of the data cloud. An observation with a distance exceeding this value is considered an outlier. For example, a threshold of $0.95$ specifies that an observation should be considered an outlier if its distance value exceeds $95\%$ of the distances from the simulated data points to the data center.
+
+
+
+

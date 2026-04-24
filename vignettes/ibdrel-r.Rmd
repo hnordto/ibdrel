@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 ## Basic usage
 
-The default model, `ibdrel-unilineal` is loaded using the `fitModel()` function, with `data = NULL`. Features and match threshold values are set using the `features` and `cutoff` arguments. In the following example, the default model is used to classify an artifical example of IBD sharing (segment lengths).
+The default model, `ibdrel-unilineal` is loaded using the `fitModel()` function. Features and match threshold values are set using the `features` and `cutoff` arguments. In the following example, the default model is used to classify an artifical example of IBD sharing (segment lengths).
 
 ```{r setup}
 library(ibdrel)

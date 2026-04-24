@@ -84,6 +84,4 @@ $$
 
 Here, $D^2$ is the squared Mahalanobis distance, $\mathbf{x}$ is the observed values of total segment length and number of segments, $\mathbf{m}$ is the mean values of total segment length and number of segments for the simulated data, and $C^{-1}$ is the estimated covariance between the two variables. Computations are handled by `stats::mahalanobis()`.
 
-The computed distances are compared against the quantiles of a chi-square ($\chi^2$) distribution with degrees of freedom equal to the number of variables used for outlier detection. 
-
-However, multivariate normal distributions
+For any given class, $D=|\sqrt{D^2}|$ is computed for all data points in the simulated training data, and the input observation. If the distance corresponding to the observation is greater than some quantile threshold computed over all distances for the simulated data in that class, the observation is flagged as an outlier.
