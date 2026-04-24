@@ -125,7 +125,7 @@ ibdfindr2ibdrel <- function(ibdfindr) {
 #'@export
 lengthIBD = function(simlist,
                      pedlist,
-                     annotationlist,
+                     annotationlist = NULL,
                      cutoff = 0) {
 
   segmentLst = list()
@@ -134,7 +134,14 @@ lengthIBD = function(simlist,
   for (i in 1:length(simlist)) {
     sim = simlist[[i]]
     ped = pedlist[[i]]
-    annotation = annotationlist[i]
+
+    if (is.null(annotationlist)) {
+      annotation = annotatePedigree(ped)
+    } else {
+      annotation = annotationlist[i]
+    }
+
+
 
     segments = ibdsim2::findPattern(sim, pattern = list(carriers = identifyLeaves(ped)),
                                     cutoff = cutoff, unit = "cm")
