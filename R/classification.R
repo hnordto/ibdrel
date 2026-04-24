@@ -116,6 +116,8 @@ classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
 
   if (identical(obs, numeric(0)) || is.null(obs)) {
     logprobs = rep(-Inf, length(pdfuns)) # Likelihood = 0 for all classes if obs < cutoff
+  #} else if (sum(obs)/3391 < 1/2048) {
+    #logprobs = rep(-Inf, length(pdfuns))
   } else {
     logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
   }
@@ -188,52 +190,6 @@ computeMahalanobis <- function(features, obs, cutoff, featureSel, threshold) {
 
 }
 
-computeLOF <- function(features, obs) {
-  features <- as.data.frame(features)
-  obs.features <- as.data.frame(obsToFeatures(obs))
-  colnames(obs.features) <- colnames(features)
-
-  data <- rbind(features, obs.features)
-  #data$countPdf <- log1p(data$countPdf)
-  data <- scale(data)
-
-  # Use a subsample if nrow > 1000 (approximation to enhance efficiency)
-
-  if (nrow(data) > 10000) {
-    idx <- sample(1:nrow(data), 10000, replace = FALSE)
-    data <- data[idx,]
-  }
-
-  lofs <- dbscan::lof(data, minPts = 30)
-  lof.threshold <- quantile(lofs, p = .9)
-  lof <- lofs[length(lofs)] # LOF of obs
-
-  list(lof = lof, threshold = lof.threshold)
-
-
-
-}
-
-LOF <- function(obs, features, orderLst, top_n) {
-
-  order.idx <- match(names(orderLst), names(features))
-
-  features.full <- features
-  features <- features[order.idx]
-  features <- features[1:top_n]
-
-  res = lapply(features, function(x) computeLOF(x, obs))
-
-  lof <- as.numeric(lapply(res, function(r) r$lof))
-  threshold <- as.numeric(lapply(res, function(r) r$threshold))
-
-  lof <- c(lof, rep(NA, length(features.full)-top_n))
-  threshold <- c(threshold, rep(NA, length(features.full)-top_n))
-
-  list(lof = lof, threshold = threshold)
-
-}
-
 #'
 #'@export
 distance <- function(obs, features, cutoff, featureSel, threshold) {
@@ -245,92 +201,4 @@ distance <- function(obs, features, cutoff, featureSel, threshold) {
   res = lapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel, threshold))
 
   res
-}
-
-
-
-## Performance
-
-testClassifier <- function(testsegments,
-                           pdfs,
-                           metadata,
-                           agg.level,
-                           all = FALSE) {
-  if(isFALSE(all)) {
-    res <- data.frame(true = character(),
-                      pred = character(),
-                      prob = numeric())
-  } else {
-    res_mat <- matrix(data = NA,
-                      nrow = sum(sapply(testsegments, length)),
-                      ncol = nrow(unique(metadata[agg.level])))
-  }
-
-  class_lst = c()
-  k = 1
-
-  for (i in 1:length(testsegments)) {
-    ped.rel = names(testsegments)[i]
-    segments = testsegments[[i]]
-
-    true = metadata |>
-      filter(rel == ped.rel) |>
-      select(agg.level) |>
-      as.character()
-
-    if (!(true %in% class_lst)) {
-      class_lst = c(class_lst, true)
-    }
-
-
-    for (segment in segments) {
-      prediction = classify(segment, pdfs, sort = FALSE) # Very important!
-      prediction = normalizeLikelihoods(prediction)
-      prediction_top = classify(segment, pdfs, sort = TRUE)[1]
-    #  prediction_top = normalizeClassProbs(prediction_top)
-
-      pred = metadata |>
-        dplyr::filter(rel == names(prediction_top)) |>
-        dplyr::select(agg.level) |>
-        as.character()
-
-      if (isFALSE(all)) {
-        res.tmp <- data.frame(true = true,
-                              pred = pred,
-                              prob = prediction_top)
-        res <- rbind(res, res.tmp)
-      } else {
-        res_mat[k, ] = prediction
-        k = k +1
-      }
-    }
-  }
-
-  if (isFALSE(all)) {
-    res <- res
-  } else {
-    colnames(res_mat) <- names(prediction)
-    res <- res_mat
-  }
-
-  return (res)
-} # Can be used to test both aggregation before and aggregation after!
-
-
-trueClasses <- function(testsegments,
-                        metadata,
-                        agg.level) {
-
-  truth <- c()
-
-  for (i in 1:length(testsegments)) {
-    true = metadata |>
-      dplyr::filter(rel == names(testsegments)[i]) |>
-      dplyr::select(agg.level) |>
-      as.character()
-
-    truth <- c(truth, rep(true, length(testsegments[[i]])))
-  }
-
-  return (truth)
 }
