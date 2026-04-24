@@ -312,7 +312,7 @@ sexstr_to_int = function(sexstr) {
 
 getSwpSexPath = function(ped, sexPath) {
   pathIds = getPath(ped)
-  actual_sexPath_int = getSex(ped, ids = pathIds)
+  actual_sexPath_int = pedtools::getSex(ped, ids = pathIds)
 
   assigned_sexPath_split = strsplit(sexPath, "")[[1]]
 
@@ -350,22 +350,22 @@ constructPedigrees = function(pedigrees_df) {
     half = as.logical(pedigrees_df[i, "half"])
 
     if (type == "lineal") {
-      ped = linearPed(removal)
+      ped = pedtools::linearPed(removal)
 
 
       if(!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds)
       }
 
 
     } else if (type == "avuncular") {
-      ped = avuncularPed(rem = removal, half = half)
+      ped = pedtools::avuncularPed(rem = removal, half = half)
 
 
       if(!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds)
       }
 
 
@@ -374,7 +374,7 @@ constructPedigrees = function(pedigrees_df) {
 
       if (!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds)
       }
 
     }

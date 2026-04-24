@@ -37,15 +37,15 @@ pedVariants <- function(ped, ids = identifyLeaves(ped), onlyExtremes = FALSE) {
   nGen = if(type == "lineal" || type == "avuncular") degree+as.integer(isFALSE(half)) else NA
 
 
-  path = ibdrel:::getPath(ped, ids)
+  path = getPath(ped, ids)
   anchors = anchor(ped, ids)
   free = path[!(path %in% anchors)]
 
   anchors.idx = which(path %in% anchors)
   free.idx = which(path %in% free)
 
-  anchor.comb <- ibdrel:::sexCombinations(length(anchors), FALSE)
-  free.comb <- ibdrel:::sexCombinations(length(free), FALSE)
+  anchor.comb <- sexCombinations(length(anchors), FALSE)
+  free.comb <- sexCombinations(length(free), FALSE)
 
   if (length(free.comb) == 0) {
     free.comb = "m" # Arbitrary
