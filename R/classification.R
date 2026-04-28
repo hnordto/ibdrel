@@ -202,3 +202,23 @@ distance <- function(obs, features, cutoff, featureSel, threshold) {
 
   res
 }
+
+#'
+#'@export
+trueClasses <- function(testsegments,
+                        metadata,
+                        agg.level) {
+
+  truth <- c()
+
+  for (i in 1:length(testsegments)) {
+    true = metadata |>
+      dplyr::filter(rel == names(testsegments)[i]) |>
+      dplyr::select(agg.level) |>
+      as.character()
+
+    truth <- c(truth, rep(true, length(testsegments[[i]])))
+  }
+
+  return (truth)
+}
