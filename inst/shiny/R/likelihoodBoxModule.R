@@ -19,110 +19,62 @@ checkLikelihood = function(likelihood) {
 
 likelihoodBoxUI = function(id) {
 
-  tagList(
-    tabBox(
+  box(
+    #title = div(
+    #  div(
+    #    helpWidget(id)
+    #  )
+    #),
+    title = "",
+    width = NULL,
+    collapsible = FALSE,
+    class = "table-box",
+
+    tabsetPanel(
       id = NS(id, "resTabs"),
-      width = NULL,
       selected = "eqclass.detailed",
-      collapsible = FALSE,
+      type = "tabs",
 
-      title = div(
-        div(
-          helpWidget(id)
-        )
-      ),
-
-      tabPanel(
-        title = "Ped",
-        value = "eqclass.detailed",
-        div(
-          class = "table-box",
-          gt::gt_output(NS(id, "resTableDetailedEq"))
-        )
-      ),
-
-      tabPanel(
-        title = "Rel",
-        value = "eqclass",
-        div(
-          class = "table-box",
-          gt::gt_output(NS(id, "resTableEq"))
-        )
-      ),
-
-      tabPanel(
-        title = "Kap",
-        value = "kappa",
-        div(
-          class = "table-box",
-          gt::gt_output(NS(id, "resTableKappa"))
-        )
-      ),
-
-      tabPanel(
-        title = "Kin",
-        value = "kinship",
-        div(
-          class = "table-box",
-          gt::gt_output(NS(id, "resTableKinship"))
-        )
-      ),
-
-      tabPanel(
-        title = "Deg",
-        value = "degree",
-        div(
-          class = "table-box",
-          gt::gt_output(NS(id, "resTableDegree"))
-        )
-      )
+      tabPanel(title = "Ped", value = "eqclass.detailed"),
+      tabPanel(title = "Rel", value = "eqclass"),
+      tabPanel(title = "Kap", value = "kappa"),
+      tabPanel(title = "Kin", value = "kinship"),
+      tabPanel(title = "Deg", value = "degree")
     ),
 
-    uiOutput(NS(id,"multiplePedBox"))
+    DT::DTOutput(NS(id, "resTable"))
+
   )
 }
 
 likelihoodBoxServer = function(id, data) {
   moduleServer(id, function(input, output, session) {
 
-    # Set active tab
     observe({
-      req(input$resTabs)
       data[["selectedTab"]] <- input$resTabs
-      data[["selectedClass"]] <- input$selectClass
     })
 
-
-    output$resTableDetailedEq = gt::render_gt({
-      res <- "eqclass.detailed"
+    table_data <- reactive({
+      res <- input$resTabs
       checkLikelihood(data[["likelihoods"]][[res]])
-      likelihoodTable(data, res, session)
+      computeLikelihoodTable(data, res)
     })
 
-    output$resTableEq = gt::render_gt({
-      res <- "eqclass"
-      checkLikelihood(data[["likelihoods"]][[res]])
-      likelihoodTable(data, res, session)
+    output$resTable <- DT::renderDataTable({
+      tab <- table_data()
+      likelihoodTable(tab$df)
     })
 
-    output$resTableKappa = gt::render_gt({
-      res <- "kappa"
-      checkLikelihood(data[["likelihoods"]][[res]])
-      likelihoodTable(data, res, session)
-    })
+    observeEvent(input$resTable_rows_selected, {
+      idx <- input$resTable_rows_selected
+      if (length(idx) == 1) {
+        tab <- table_data()
+        class_codes <- tab$class_codes
+        selected_class <- class_codes[idx]
+        data[["selectedClass"]] <- selected_class
+      }
 
-    output$resTableKinship = gt::render_gt({
-      res <- "kinship"
-      checkLikelihood(data[["likelihoods"]][[res]])
-      likelihoodTable(data, res, session)
     })
-
-    output$resTableDegree = gt::render_gt({
-      res <- "degree"
-      checkLikelihood(data[["likelihoods"]][[res]])
-      likelihoodTable(data, res, session)
-    })
-
 
     # Help
     observeEvent(input$help, {
@@ -139,16 +91,14 @@ likelihoodBoxServer = function(id, data) {
   })
 }
 
-# Format table
+# Table maps
 
-likelihoodTable <- function(data, resolution, session) {
-
-  likelihoods = data[["likelihoods"]][[resolution]] # XX FIX XX
+computeLikelihoodTable <- function(data, resolution) {
+  likelihoods = data[["likelihoods"]][[resolution]]
   mdists = data[["mdists"]][[resolution]]
   filter = data[["filter"]]
   normalize = data[["normalize"]]
   threshold = data[["mdistthreshold"]][[resolution]]
-
   metadata = data[["metadata"]]
 
 
@@ -233,75 +183,47 @@ likelihoodTable <- function(data, resolution, session) {
     class_rename = "Deg"
   }
 
+  df$Outlier <- ifelse(
+    df$Outlier,
+    "&#9989;",
+    "&#10060;"
+  )
+  df$Class <- classlabels[df$Class]
+  #colnames(df)[colnames(df) == "Rank"] <- ""
+  #colnames(df)[colnames(df) == "Outlier"] <- ""
+  #colnames(df)[colnames(df) == "Class"] <- class_rename
+  #colnames(df)[colnames(df) == "Likelihood"] = "Lik"
 
-  res <- df |>
+  list(
+    df = df,
+    class_codes = names(likelihoods),
+    class_label = class_rename
+  )
+}
 
-    gt() |>
+# Format table
 
-    text_transform(
-      locations = cells_body(columns = c(Outlier)),
-      fn = function(x) {
-        ifelse(
-          x,
-          "<span>&#9989;</span>",
-          "<span>&#10060;</span>"
-        )
-      }
-    ) |>
+likelihoodTable <- function(df) {
 
-    text_transform(
-      locations = cells_body(columns = c(Class)),
-      fn = function(x) {
-        sprintf(
-          "<div class='clickable-cell' id='rel_%s'>%s</div>",
-          x, classlabels[x]
-        )
-      }
-    ) |>
-    tab_options(data_row.padding = px(1),
-                container.padding.y = px(3),
-                table.font.size = "100%",
-                table.layout = "auto",
-                table.additional_css = ".gt_table {width: max-content !important}") |>
-    tab_style(
-      style = cell_fill(color = "forestgreen", alpha = .25),
-      locations = cells_body(columns = c(Class, Likelihood))
-    ) |>
-    tab_style(
-      style = cell_text(size = pct(105)),
-      locations = cells_column_labels()
-    ) |>
-    tab_style(style = cell_text(whitespace = "nowrap",
-                                align = "center"),
-              locations = list(cells_body(), cells_column_labels())) |>
 
-    tab_options(
-      data_row.padding = px(1),
-      container.padding.y = px(3)
-    ) |>
-
-    cols_width(
-      Rank ~ pct(5),
-      Outlier ~ pct(5),
-      Class ~ pct(30),
-      Likelihood ~ pct(10),
-      everything() ~ pct(5)
-    ) |>
-
-    cols_label(
-      Rank = "",
-      Outlier = "",
-     # Class = class_rename,
-      Likelihood = "Lik"
-    ) |>
-    gt_theme_538(quiet = TRUE)
-
-  session$onFlushed(function() {
-    session$sendCustomMessage(
-      "initClickableCells",
-      list(ids = df$Class, ns = session$ns("selectClass"))
-    )
-  }, once = TRUE)
+  res <- DT::datatable(
+    df,
+    rownames = FALSE,
+    escape = FALSE,
+    selection = "single",
+    options = list(
+      pageLength = nrow(df),
+      dom = "t",
+      columnDefs = list(
+        list(width = "5%", targets = which(names(df) == "Rank") - 1),
+        list(width = "5%", targets = which(names(df) == "Outlier") - 1),
+        list(width = "30%", targets = which(names(df) == "Class") -1),
+        list(width = "10%", targets = which(names(df) == "Likelihood") - 1)
+      ),
+      scrollX = FALSE
+    ),
+    class = "compact stripe hover"
+  )
 
   return (res)
 }

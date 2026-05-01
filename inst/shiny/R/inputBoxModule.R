@@ -36,84 +36,115 @@ inputBoxUI <- function(id) {
   box(
     width = NULL,
     collapsible = FALSE,
-    title = "Input",
+    title = NULL,
 
-    # Model controls
-    h5("Model"),
-    pickerInput(inputId = NS(id, "featureSelection"),
-                label = "Features",
-                choices = supported.features,
-                selected = c("count", "total"),
-                options = pickerOptions(
-                  actionsBox = TRUE,
-                  size = 10,
-                  selectedTextFormat = "count > 3"
-                ),
-                multiple = TRUE),
-    numericInput(inputId = NS(id, "cutoff"),
-                 label = "Match threshold",
-                 value = 7, min = 0, step = 1),
-
-    # Input
-    h5("Input"),
-    tabsetPanel(
-      id = NS(id, "inputMode"),
-      type = "pills",
-
-      tabPanel(
-        title = "Segments",
-        value = "segments"
-      ),
-
-      tabPanel(
-        title = "Simulate",
-        value = "simulate",
-        tooltip(
-          selectInput(inputId = NS(id, "simrel"),
-                      label = "Relationship",
-                      choices = annotation),
-          title = "Simulate"),
-        actionBttn(inputId = NS(id, "simulateButton"),
-                   "Simulate")
-      ),
-
-      tabPanel(
-        title = "Upload",
-        value = "upload",
-        tooltip(
-          fileInput(inputId = NS(id, "segfile"),
-                    label = "Segments file",
-                    buttonLabel = icon("folder-open"),
-                    accept = c(".txt")),
-          title = "Upload"
-        )
-
+    h5("IBD input"),
+    radioButtons(
+      inputId = NS(id, "inputType"),
+      label = NULL,
+      inline = TRUE,
+      choices = c(
+        "Segments" = "segments",
+        "Summaries" = "summaries"
       )
+    ),
+
+    conditionalPanel(
+      condition =  sprintf("input['%s'] == 'segments'", NS(id,"inputType")),
+      h5("Segments"),
+      tooltip(
+        textAreaInput(
+          inputId = NS(id,"segmentInput"),
+          label = "Segment lengths (cM)",
+          rows = 8,
+          placeholder = "One segment per line, in cM"
+        ),
+        title = "Paste or type segment lengths"
+      ),
+      tooltip(
+        div(
+          class = "file-upload",
+          fileInput(
+            inputId = NS(id,"segfile"),
+            label = "Upload segments file (.txt)",
+            buttonLabel = icon("folder-open"),
+            accept = ".txt"
+          )
+        ),
+        title = "Upload file with segment lengths"
+      ),
+
+      tags$label("Simulate example"),
+      shinyWidgets::dropdownButton(
+        inputId = NS(id, "simulateDropdown"),
+        label = "Simulate",
+        icon = icon("dice"),
+        circle = FALSE,
+        status = "default",
+        width = "100%",
+        tooltip(
+          selectInput(
+            inputId = NS(id,"simrel"),
+            label = "Relationship",
+            choices = annotation
+          ),
+          title = "Relationship used for simulation"
+        ),
+        actionButton(
+          inputId = NS(id,"simulateButton"),
+          label = "Simulate",
+          size = "sm",
+          style = "simple",
+          width = "100%",
+          icon = icon("check")
+        )
+      )
+    ),
+
+    conditionalPanel(
+      condition =  sprintf("input['%s'] == 'summaries'", NS(id,"inputType")),
+      uiOutput(NS(id, "summaries_ui"))
 
     ),
 
-    tooltip(
-      textAreaInput(inputId = NS(id, "segmentInput"),
-                    label = "Segment lengths (cM)",
-                    rows = 10),
-      title = "Segment input"
-    ),
+    hr(),
+    h5("Match threshold"),
+    numericInput(inputId = NS(id, "cutoff"),
+                 label = NULL,
+                 value = 7, min = 0, step = 1),
+    hr(),
+    # use dropdown() instead of dropdownButton() because the latter don't work with pickerInput()
+    shinyWidgets::dropdown(
+      inputId = NS(id, "settingsDropdown"),
+      label = "Settings",
+      icon = icon("gear"),
+      circle = FALSE,
+      status = "default",
+      width = "100%",
+      pickerInput(inputId = NS(id, "featureSelection"),
+                  label = "Features",
+                  choices = supported.features,
+                  selected = c("count", "total"),
+                  options = pickerOptions(
+                    actionsBox = TRUE,
+                    size = 10,
+                    selectedTextFormat = "count > 3"
+                  ),
+                  multiple = TRUE),
+      materialSwitch(inputId = NS(id, "normalizeButton"), value = TRUE,
+                     label = "Normalize likelihoods"),
+      materialSwitch(inputId = NS(id, "filterButton"), value = FALSE,
+                     label = "Filter outliers"),
 
-    # Controls
-    h5("Results"),
-    materialSwitch(inputId = NS(id, "normalizeButton"), value = TRUE,
-                   label = "Normalize likelihoods"),
-    materialSwitch(inputId = NS(id, "filterButton"), value = FALSE,
-                   label = "Filter outliers"),
-
-    h5("Outlier detection"),
-    numericInput(
-      inputId = NS(id, "outlierThreshold"),
-      label = HTML("Outlier threshold"),
-      min = 0,
-      max = 1,
-      value = 0.95,
-      step = 0.01
+      h5("Outlier detection"),
+      numericInput(
+        inputId = NS(id, "outlierThreshold"),
+        label = HTML("Outlier threshold"),
+        min = 0,
+        max = 1,
+        value = 0.95,
+        step = 0.01
+      )
     )
 
   )
@@ -122,6 +153,9 @@ inputBoxUI <- function(id) {
 
 inputBoxServer = function(id, data) {
   moduleServer(id, function(input, output, session) {
+
+    ns <- session$id
+
     observe({
 
       resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
@@ -147,6 +181,7 @@ inputBoxServer = function(id, data) {
 
     })
 
+
     observe({
       req(data[["selectedTab"]])
       data[["metadata"]]$class = data[["metadata"]][[data[["selectedTab"]]]]
@@ -156,6 +191,10 @@ inputBoxServer = function(id, data) {
 
 
     observeEvent(input$segmentInput, {
+
+
+      shinyjs::reset(NS(id,"segfile"))
+
 
       obs = as.numeric(input$segmentInput |>
                          strsplit("\n") |>
@@ -236,8 +275,66 @@ inputBoxServer = function(id, data) {
                sep = ",")
       updateTextAreaInput(session, "segmentInput", value = paste(x, collapse = "\n"))
     })
-  })
 
+    # Summaries UI
+
+    output$summaries_ui <- renderUI({
+      req(input$featureSelection)
+      req(input$inputType)
+
+      if (input$inputType != "summaries") return(NULL)
+
+      selected_features <- input$featureSelection
+
+      ui_list <- lapply(selected_features, function(feat) {
+        spec <- feature_specs[[feat]]
+
+        numericInput(
+          inputId = NS(id,paste0("summary_", feat)),
+          label = spec$label,
+          value = spec$value,
+          min = spec$min,
+          step = spec$step
+        )
+      })
+
+      tagList(ui_list)
+
+    })
+
+  })
 }
 
 
+feature_specs <- list(
+  count = list(
+    label = "Numer of segments (count)",
+    value = NA,
+    min = 0,
+    step = 1
+  ),
+  total = list(
+    label = "Total segment length (cM)",
+    value = NA,
+    min = 0,
+    step = 0.1
+  ),
+  median = list(
+    label = "Median segment length (cM)",
+    value = NA,
+    min = 0,
+    step = 0.1
+  ),
+  longest = list(
+    label = "Longest segment length (cM)",
+    value = NA,
+    min = 0,
+    step = 0.1
+  ),
+  shortest = list(
+    label = "Shortest segment length (cM)",
+    value = NA,
+    min = 0,
+    step = 0.1
+  )
+)

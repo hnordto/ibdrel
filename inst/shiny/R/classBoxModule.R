@@ -260,9 +260,9 @@ jointDistPlot <- function(data, resolution, selected.class) {
   }
   df = data.frame(count, total)
 
-  p <- ggplot2::ggplot() +
-    geom_jitter(data = df, mapping = aes(x = count, y = total), alpha = .5) +
-    stat_ellipse(data = df, mapping = aes(x = count, y = total), type = "norm", alpha = .75,
+  p <- ggplot2::ggplot(data = df, mapping = aes(x = count, y = total)) +
+    geom_jitter(alpha = .5) +
+    stat_ellipse(type = "norm", alpha = .75,
                  level = data[["chisq"]]) + # Chisq when type = "norm"
     labs(x = "Number of segments",
          y = "Total IBD segment length (cM)") +
@@ -278,6 +278,8 @@ jointDistPlot <- function(data, resolution, selected.class) {
       geom_point(data = df.obs, mapping = aes(x = count, y = total),
                   shape = 4, stroke = 2, size = 4, colour = "red2")
   }
+
+  p <- ggExtra::ggMarginal(p, type = "density")
 
   return (p)
 
