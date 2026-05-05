@@ -28,7 +28,6 @@ likelihoodBoxUI = function(id) {
     title = "",
     width = NULL,
     collapsible = FALSE,
-    class = "table-box",
 
     tabsetPanel(
       id = NS(id, "resTabs"),

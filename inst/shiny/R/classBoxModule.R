@@ -167,7 +167,7 @@ classBoxServer = function(id, data) {
 
       pedPlot(peds()[[current_index()]])
 
-    })
+    }, execOnResize = TRUE, res = 72)
 
 
   })
@@ -254,7 +254,7 @@ jointDistPlot <- function(data, resolution, selected.class) {
   obs = data[["obs"]]
 
   if (!identical(obs, numeric(0))) {
-    obs.features = ibdrel::obsToFeatures(obs, data[["cutoff"]], c("count", "total"))
+    obs.features = ibdrel::obsToFeatures(obs, data[["cutoff"]], c("count", "total"), data[["isFeatures"]])
   } else {
     obs.features = NULL
   }
@@ -298,6 +298,7 @@ pedPlot <- function(ped) {
 
 
   plot(ped, hatched = ped.leaves, fill = list(red = ped.leaves),
-       labs = NULL, autoScale = TRUE, title = title)
+       labs = NULL, autoScale = TRUE, title = title,
+       cex = 1.2, cex.main = 1.5)
 
 }

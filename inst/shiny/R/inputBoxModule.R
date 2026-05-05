@@ -38,6 +38,12 @@ inputBoxUI <- function(id) {
     collapsible = FALSE,
     title = NULL,
 
+    h5("Match threshold"),
+    numericInput(inputId = NS(id, "cutoff"),
+                 label = NULL,
+                 value = 7, min = 0, step = 1),
+    hr(),
+
     h5("IBD input"),
     radioButtons(
       inputId = NS(id, "inputType"),
@@ -46,7 +52,8 @@ inputBoxUI <- function(id) {
       choices = c(
         "Segments" = "segments",
         "Summaries" = "summaries"
-      )
+      ),
+      selected = "segments"
     ),
 
     conditionalPanel(
@@ -94,24 +101,40 @@ inputBoxUI <- function(id) {
           inputId = NS(id,"simulateButton"),
           label = "Simulate",
           size = "sm",
-          style = "simple",
           width = "100%",
+          style = "simple",
           icon = icon("check")
-        )
+       )
       )
     ),
 
     conditionalPanel(
       condition =  sprintf("input['%s'] == 'summaries'", NS(id,"inputType")),
-      uiOutput(NS(id, "summaries_ui"))
-
+      uiOutput(NS(id, "summaries_ui")),
     ),
 
     hr(),
-    h5("Match threshold"),
-    numericInput(inputId = NS(id, "cutoff"),
-                 label = NULL,
-                 value = 7, min = 0, step = 1),
+
+    fluidRow(
+      column(
+        9,
+        actionButton(
+          inputId = NS(id,"predictButton"),
+          label = "Predict",
+          size = "sm",
+          style = "simple",
+          width = "100%",
+          icon = icon("flag-checkered")
+        ),
+      ),
+      column(
+        3,
+        uiOutput(NS(id,"iconran"))
+      )
+    ),
+
+
+
     hr(),
     # use dropdown() instead of dropdownButton() because the latter don't work with pickerInput()
     shinyWidgets::dropdown(
@@ -119,6 +142,7 @@ inputBoxUI <- function(id) {
       label = "Settings",
       icon = icon("gear"),
       circle = FALSE,
+      size = "sm",
       status = "default",
       width = "100%",
       pickerInput(inputId = NS(id, "featureSelection"),
@@ -158,6 +182,8 @@ inputBoxServer = function(id, data) {
 
     observe({
 
+      req(input$cutoff)
+
       resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
       data[["resolutions"]] <- resolutions
 
@@ -186,50 +212,81 @@ inputBoxServer = function(id, data) {
       req(data[["selectedTab"]])
       data[["metadata"]]$class = data[["metadata"]][[data[["selectedTab"]]]]
       data[["classes"]] = names(data[["segments"]][[data[["selectedTab"]]]])
+      data[["isFeatures"]] = ifelse(input$inputType == "summaries", T, F)
+    })
+
+    # Reset if anything changes
+    reset <- reactiveVal(TRUE)
+    observe({
+      data[["cutoff"]] = input$cutoff
+      data[["segmentInput"]] = input$segmentInput
+      data[["inputType"]] = input$inputType
+      reset(TRUE)
+      enable("predictButton")
     })
 
 
+    observeEvent(input$predictButton, {
 
-    observeEvent(input$segmentInput, {
+      req(input$cutoff)
+      req(input$outlierThreshold)
+      req(input$featureSelection)
+
+      data[["chisq"]] = input$outlierThreshold
 
 
-      shinyjs::reset(NS(id,"segfile"))
+      input_type = input$inputType
+      is_features <- data[["isFeatures"]]
 
 
-      obs = as.numeric(input$segmentInput |>
-                         strsplit("\n") |>
-                         unlist())
-      obs = obs[obs >= input$cutoff]
-      data[["obs"]] = obs
+      if (input_type == "segments") {
+        obs = as.numeric(input$segmentInput |>
+                           strsplit("\n") |>
+                           unlist())
+        obs = obs[obs >= input$cutoff]
+        data[["obs"]] = obs
+      } else if (input_type == "summaries") {
+        selected_features <- input$featureSelection
+        summaries <- setNames(lapply(selected_features, function(x) input[[x]]), selected_features)
+        data[["obs"]] <- summaries
+
+      }
+
+      data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
+        classify(data[["obs"]], x, obsType = input_type, cutoff = input$cutoff, sort = FALSE) #!!!
+      })
 
       data[["mdists"]] = lapply(data[["features"]], function(x) {
         l <- distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection,
-                      threshold = input$outlierThreshold)
+                      threshold = input$outlierThreshold, isFeatures = is_features)
         sapply(l, `[[`, "dist")
       })
 
+      data[["mdistthreshold"]] = lapply(data[["features"]], function(x) {
+        l <- distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection,
+                      threshold = input$outlierThreshold, isFeatures = is_features)
+        sapply(l, `[[`, "threshold")
+      })
+
+      reset(FALSE)
+      disable("predictButton")
+
     })
 
-    observe({
-      data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
-        classify(data[["obs"]], x, cutoff = input$cutoff, sort = FALSE) #!!!
-      })
-    })
+    output$iconran <- renderUI(icon(name = if(isTRUE(reset())) "arrow-left" else "check"))
 
 
     # Controls
     observe({
+
+
+
       data[["normalize"]] = input$normalizeButton
-      data[["chisq"]] = input$outlierThreshold
-      data[["mdistthreshold"]] = lapply(data[["features"]], function(x) {
-        l <- distance(data[["obs"]], x, cutoff = input$cutoff, featureSel = input$featureSelection,
-                      threshold = input$outlierThreshold)
-        sapply(l, `[[`, "threshold")
-      })
+      data[["filter"]] = ifelse(input$filterButton, TRUE, FALSE)
+
       #data[["mdistthreshold"]] = qchisq(p = input$outlierThreshold,
       #                                 df = length(data[["features"]][[1]][[1]])) # Arbitrary feature vector
-      data[["filter"]] = ifelse(input$filterButton, TRUE, FALSE)
-      data[["cutoff"]] = input$cutoff
+
     })
 
     # Input mode
@@ -290,7 +347,7 @@ inputBoxServer = function(id, data) {
         spec <- feature_specs[[feat]]
 
         numericInput(
-          inputId = NS(id,paste0("summary_", feat)),
+          inputId = NS(id,paste0(feat)),
           label = spec$label,
           value = spec$value,
           min = spec$min,
@@ -305,6 +362,13 @@ inputBoxServer = function(id, data) {
   })
 }
 
+summaries_obs <- list(
+  count = integer(),
+  total = numeric(),
+  median = numeric(),
+  longest = numeric(),
+  shortest = numeric()
+)
 
 feature_specs <- list(
   count = list(

@@ -8,7 +8,7 @@ ui = dashboardPage(
     title =
       div(
         class = "apptitle",
-        "ibdrel"
+        "IBDrel"
       )
   ),
 
