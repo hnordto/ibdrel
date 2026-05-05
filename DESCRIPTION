@@ -30,7 +30,8 @@ Imports:
   scales,
   matrixStats,
   stringr,
-  gtExtras
+  gtExtras,
+  ggExtra
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
