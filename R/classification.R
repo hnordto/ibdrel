@@ -65,31 +65,56 @@ preparePdfs = function(lengthData, featureSel = c("count", "total"), cutoff = 0,
 
 }
 
-classProb = function(obs, pdfs, log = T) {
+classProb = function(obs, pdfs, obsType = "segments", log = T) {
 
   var.names <- names(pdfs)
 
   probs = c()
 
-  if ("count" %in% var.names) {
-    probs = c(probs, pdfs$count(length(obs)))
+  if (obsType == "segments") {
+    if ("count" %in% var.names) {
+      probs = c(probs, pdfs$count(length(obs)))
+    }
+
+    if ("total" %in% var.names) {
+      probs = c(probs, pdfs$total(sum(obs)))
+    }
+
+    if ("median" %in% var.names) {
+      probs = c(probs, pdfs$median(safe_median(obs)))
+    }
+
+    if ("longest" %in% var.names) {
+      probs = c(probs, pdfs$longest(safe_max(obs)))
+    }
+
+    if ("shortest" %in% var.names) {
+      probs = c(probs, pdfs$shortest(safe_min(obs)))
+    }
+  } else if (obsType == "summaries") {
+    if ("count" %in% var.names) {
+      probs = c(probs, pdfs$count(obs$count))
+    }
+
+    if ("total" %in% var.names) {
+      probs = c(probs, pdfs$total(obs$total))
+    }
+
+    if ("median" %in% var.names) {
+      probs = c(probs, pdfs$median(obs$median))
+    }
+
+    if ("longest" %in% var.names) {
+      probs = c(probs, pdfs$longest(obs$max))
+    }
+
+    if ("shortest" %in% var.names) {
+      probs = c(probs, pdfs$shortest(obs$min))
+    }
+  } else {
+    stop("Invalid obsType. Must be either 'segments' (default) or 'summaries'.")
   }
 
-  if ("total" %in% var.names) {
-    probs = c(probs, pdfs$total(sum(obs)))
-  }
-
-  if ("median" %in% var.names) {
-    probs = c(probs, pdfs$median(safe_median(obs)))
-  }
-
-  if ("longest" %in% var.names) {
-    probs = c(probs, pdfs$longest(safe_max(obs)))
-  }
-
-  if ("shortest" %in% var.names) {
-    probs = c(probs, pdfs$shortest(safe_min(obs)))
-  }
 
 #  p0 = pdfs$countPdf(length(obs))
 #  p1 = pdfs$totalPdf(sum(obs))
@@ -111,16 +136,25 @@ classProbs = function(obs, pdfuns) {
 
 #'
 #'@export
-classify = function(obs, pdfuns, cutoff = 0, sort = TRUE) {
-  obs = obs[obs >= cutoff]
+classify = function(obs, pdfuns, obsType = "segments", cutoff = 0, sort = TRUE) {
 
-  if (identical(obs, numeric(0)) || is.null(obs)) {
-    logprobs = rep(-Inf, length(pdfuns)) # Likelihood = 0 for all classes if obs < cutoff
-  #} else if (sum(obs)/3391 < 1/2048) {
-    #logprobs = rep(-Inf, length(pdfuns))
+  if(obsType == "segments") {
+    obs = obs[obs >= cutoff]
+
+    if (identical(obs, numeric(0)) || is.null(obs)) {
+      logprobs = rep(-Inf, length(pdfuns)) # Likelihood = 0 for all classes if obs < cutoff
+      #} else if (sum(obs)/3391 < 1/2048) {
+      #logprobs = rep(-Inf, length(pdfuns))
+    } else {
+      logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, obsType = "segments", log = T))
+    }
+  } else if (obsType == "summaries") {
+    logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, obsType = "summaries", log = T))
   } else {
-    logprobs = sapply(pdfuns, function(pdfs) classProb(obs, pdfs, log = T))
+    stop("Invalid obsType. Must be either 'segments' (default) or 'summaries'.")
   }
+
+
 
 
 
@@ -147,19 +181,24 @@ computeCovariance <- function(features) {
 
 #'
 #'@export
-obsToFeatures <- function(obs, cutoff, featureSel) {
-  obs.lst = list()
-  obs.lst$obs[[1]] = obs # Same list structure as training data
+obsToFeatures <- function(obs, cutoff, featureSel, isFeatures = FALSE) {
 
-  obs.features = lapply(obs.lst, prepareFeatures, cutoff = cutoff, featureSel = featureSel)
+  if (isFALSE(isFeatures)) {
+    obs.lst = list()
+    obs.lst$obs[[1]] = obs # Same list structure as training data
+
+    obs.features = lapply(obs.lst, prepareFeatures, cutoff = cutoff, featureSel = featureSel)
+  } else {
+    obs.features = list("obs" = obs)
+  }
 
   obs.features
 }
 
-computeMahalanobis <- function(features, obs, cutoff, featureSel, threshold) {
+computeMahalanobis <- function(features, obs, cutoff, featureSel, threshold, isFeatures) {
 
   features <- as.data.frame(features)
-  obs.features <- as.data.frame(obsToFeatures(obs, cutoff, featureSel))
+  obs.features <- as.data.frame(obsToFeatures(obs, cutoff, featureSel, isFeatures))
 
   if (nrow(unique(features)) == 1) { # In the case of lineal of degree 1
     return (list(dist = NA, threshold = NA))
@@ -192,13 +231,13 @@ computeMahalanobis <- function(features, obs, cutoff, featureSel, threshold) {
 
 #'
 #'@export
-distance <- function(obs, features, cutoff, featureSel, threshold) {
+distance <- function(obs, features, cutoff, featureSel, threshold, isFeatures) {
 
   #order.idx <- match(names(orderLst), names(features))
 
   #features <- features[order.idx]
 
-  res = lapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel, threshold))
+  res = lapply(features, function(x) computeMahalanobis(x, obs, cutoff, featureSel, threshold, isFeatures))
 
   res
 }
