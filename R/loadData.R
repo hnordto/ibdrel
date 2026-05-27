@@ -1,6 +1,6 @@
 #'
 #'@export
-loadData <- function(data = "ibdrel-unilineal",
+loadData <- function(data = NULL,
                      levels = "all") {
   if (length(levels) == 1 && levels == "all") {
     levels = RESOLUTIONS
@@ -9,19 +9,53 @@ loadData <- function(data = "ibdrel-unilineal",
          paste(RESOLUTIONS, collapse = " , "))
   }
 
-  if(!(data) %in% BULTIN.MODELS) {
-    stop("Unknown model: ", model)
+  if(is.null(data)) {
+    dta = prepareData(ibdrel_unilineal)
+  } else {
+    dta = prepareData(data)
   }
 
-  if (data == "ibdrel-unilineal") {
-    segmentData = ibdrel_unilineal$segments
-    peds = ibdrel_unilineal$peds
-    metadata = pedsMetadata(peds)
-  }
+  dta
+}
 
-  data = sapply(RESOLUTIONS, function(x) {
+prepareData <- function(data, levels = "all") {
+  segmentData = data$segments
+  peds = data$peds
+  metadata = pedsMetadata(peds)
+
+  data.clean = sapply(RESOLUTIONS, function(x) {
     aggregateSegments(segmentData, metadata, x)
   }, simplify = FALSE)
 
-  return (data)
+  data.clean
+}
+
+removePeds <- function(data, peds, mode = "exclude") {
+  data.peds <- names(data$peds)
+
+  if (!all(data.peds == names(data$segments))) {
+    stop("List of peds and list of segments are not aligned.")
+  }
+
+  if(any(!(peds) %in% data.peds)) {
+    stop("Relationship is not in data.")
+  }
+
+  if (!(mode) %in% c("exclude", "include")) {
+    stop("Mode must be either 'exclude' or 'include'.")
+  }
+
+  peds.idx <- which(data.peds %in% peds)
+
+  if (mode == "exclude") {
+    data$peds <- data$peds[-peds.idx]
+    data$segments <- data$segments[-peds.idx]
+  } else if (mode == "include") {
+    data$peds <- data$peds[peds.idx]
+    data$segments <- data$segments[peds.idx]
+  }
+
+
+  data
+
 }
