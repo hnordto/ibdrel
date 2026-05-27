@@ -25,9 +25,11 @@ likelihoodBoxUI = function(id) {
     #    helpWidget(id)
     #  )
     #),
+    id = NS(id, "likelihoodBox"),
     title = "",
     width = NULL,
     collapsible = FALSE,
+    class = "table-box",
 
     tabsetPanel(
       id = NS(id, "resTabs"),
@@ -211,7 +213,6 @@ likelihoodTable <- function(df) {
     escape = FALSE,
     selection = "single",
     options = list(
-      pageLength = nrow(df),
       dom = "t",
       columnDefs = list(
         list(width = "5%", targets = which(names(df) == "Rank") - 1),
@@ -219,7 +220,11 @@ likelihoodTable <- function(df) {
         list(width = "30%", targets = which(names(df) == "Class") -1),
         list(width = "10%", targets = which(names(df) == "Likelihood") - 1)
       ),
-      scrollX = FALSE
+      autoWidth = TRUE,
+      scrollX = TRUE,
+      scrollY = TRUE,
+      scrollCollapse = TRUE,
+      paging = FALSE
     ),
     class = "compact stripe hover"
   )

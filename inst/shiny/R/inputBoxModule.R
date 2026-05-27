@@ -37,6 +37,7 @@ inputBoxUI <- function(id) {
     width = NULL,
     collapsible = FALSE,
     title = NULL,
+    class = "input-box",
 
     h5("Match threshold"),
     numericInput(inputId = NS(id, "cutoff"),
@@ -82,7 +83,7 @@ inputBoxUI <- function(id) {
       ),
 
       tags$label("Simulate example"),
-      shinyWidgets::dropdownButton(
+      shinyWidgets::dropdown(
         inputId = NS(id, "simulateDropdown"),
         label = "Simulate",
         icon = icon("dice"),

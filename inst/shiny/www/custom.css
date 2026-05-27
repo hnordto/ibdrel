@@ -7,10 +7,22 @@
   margin: 0rem 0rem 0rem 0.75rem;
 }
 
-.table-box {
-  height: 600px;
-  overflow-y: auto;
-  overflow-x: auto;
+.input-box {
+  overflow-x:auto;
+}
+
+table.dataTable td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+table.dataTable {
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+
+.progress-bar {
+  display: none !important!;
 }
 
 .highlight-row { background-color: #ffeaa7 !important; }
@@ -33,3 +45,13 @@
   line-height: 1.5rem!important;
   margin-bottom: 1rem!important;
 }
+
+/* Likelihood box module */
+
+
+div.card-header .box-header {
+  display:none!important;
+}
+
+
+
