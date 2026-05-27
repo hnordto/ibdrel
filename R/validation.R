@@ -13,6 +13,8 @@ topPred = function(pred, n = NULL) {
   return (tp)
 }
 
+#'
+#'@export
 sensitivity <- function(pred, true, k=1) {
   classes <- colnames(pred)
   true <- factor(true, levels = classes)

@@ -18,6 +18,8 @@ loadData <- function(data = NULL,
   dta
 }
 
+#'
+#'@export
 prepareData <- function(data, levels = "all") {
   segmentData = data$segments
   peds = data$peds
@@ -30,6 +32,8 @@ prepareData <- function(data, levels = "all") {
   data.clean
 }
 
+#'
+#'@export
 removePeds <- function(data, peds, mode = "exclude") {
   data.peds <- names(data$peds)
 
