@@ -461,6 +461,8 @@ pedsMetadata = function(pedlist) {
   metadata$code = sapply(pedlist, pedCode)
   metadata$details = lapply(pedlist, pedDetails)
   metadata$degree = sapply(pedlist, pedDegree)
+  metadata$type = sapply(pedlist, pedType)
+
 
   metadata$kappa0 = sapply(pedlist, pedKappa, 1)
   metadata$kappa1 = sapply(pedlist, pedKappa, 2)
@@ -497,6 +499,18 @@ pedKappa = function(ped, which.kappa) { # Only supporting unilineal relationship
 
 pedKinship= function(ped) { # Only supporting unilineal relationships as of now
   ribd::kinship(ped, ids = identifyLeaves(ped))
+}
+
+pedType = function(ped) {
+  v <- verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]
+
+  type = v$type
+
+  if (isFALSE(v$full)) type = "half-cousin"
+  if (type == "lineal") type = "direct"
+  if (type == "sibling") type = "cousin"
+
+  type
 }
 
 
