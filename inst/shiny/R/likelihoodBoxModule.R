@@ -11,40 +11,49 @@ helpWidget = function(id) {
   )
 }
 
+w_resolution = function(id) {
+  tooltip(
+    radioGroupButtons(
+      inputId = NS(id,"resTabs"),
+      label = NULL,
+      choices = c("Ped" = "eqclass.detailed",
+                  "Rel" = "eqclass",
+                  "Kap" = "kappa",
+                  "Kin" = "kinship",
+                  "Deg" = "degree"),
+      justified = TRUE,
+      individual = TRUE,
+      status = "olive"
+    ),
+    title = "Select resolution"
+  )
+}
+
 checkLikelihood = function(likelihood) {
-  if (all(likelihood == -Inf)) {
+  if (all(likelihood == -Inf, na.rm = TRUE)) {
     validate(need(FALSE, "Waiting for input.\nNeed at least one segment with length above cutoff value."))
   }
 }
 
 likelihoodBoxUI = function(id) {
 
-  box(
-    #title = div(
-    #  div(
-    #    helpWidget(id)
-    #  )
-    #),
+  bs4Card(
     id = NS(id, "likelihoodBox"),
-    title = "",
+    title = div(
+      "Relatedness",
+      div(w_resolution(id))
+    ),
     width = NULL,
     collapsible = FALSE,
-    class = "table-box",
+    status = "olive",
 
-    tabsetPanel(
-      id = NS(id, "resTabs"),
-      selected = "eqclass.detailed",
-      type = "tabs",
+    DT::DTOutput(NS(id, "resTable")),
 
-      tabPanel(title = "Ped", value = "eqclass.detailed"),
-      tabPanel(title = "Rel", value = "eqclass"),
-      tabPanel(title = "Kap", value = "kappa"),
-      tabPanel(title = "Kin", value = "kinship"),
-      tabPanel(title = "Deg", value = "degree")
-    ),
-
-    DT::DTOutput(NS(id, "resTable"))
-
+    checkboxGroupInput(NS(id, "likelihoodTableSettings"), "",
+                       c("Normalize" = "normalize",
+                         "Filter" = "filter"),
+                       selected = "normalize",
+                       inline = TRUE)
   )
 }
 
@@ -55,7 +64,9 @@ likelihoodBoxServer = function(id, data) {
       data[["selectedTab"]] <- input$resTabs
     })
 
+
     table_data <- reactive({
+      req(data[["likelihoods"]])
       res <- input$resTabs
       checkLikelihood(data[["likelihoods"]][[res]])
       computeLikelihoodTable(data, res)
@@ -74,7 +85,11 @@ likelihoodBoxServer = function(id, data) {
         selected_class <- class_codes[idx]
         data[["selectedClass"]] <- selected_class
       }
+    })
 
+    observe({
+      data[["normalize"]] = "normalize" %in% input$likelihoodTableSettings
+      data[["filter"]] = "filter" %in% input$likelihoodTableSettings
     })
 
     # Help

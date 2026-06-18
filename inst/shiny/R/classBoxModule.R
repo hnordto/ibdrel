@@ -44,52 +44,47 @@ nextPed = function(id) {
 
 classBoxUI = function(id) {
 
-  tabBox(
-    id = NS(id, "classTabs"),
+  bs4Card(
+    title = "Analysis",
     width = NULL,
-    selected = "Details",
-    collapsible = FALSE,
+    collapse = TRUE,
+    collapsed = FALSE,
 
-    title = NULL,
+    box(
+      title = "Pedigrees",
+      width = NULL,
+      collapsible = TRUE,
+      collapsed = TRUE,
+      div(
+        class = "ped-plot",
+        prevPed(id),
+        nextPed(id),
+        plotOutput(NS(id, "pedPlot"))
+      )
+    ),
 
-    tabPanel(
-      title = "Details",
+    box(
+      title = "IBD segment distribution",
+      width = NULL,
+      collapsible = TRUE,
+      collapsed = TRUE,
+      div(
+        class = "segment-plot",
+        plotOutput(NS(id, "jointDistPlot"))
+      )
+    ),
 
-      box(
-        title = "Pedigrees",
-        width = NULL,
-        collapsible = TRUE,
-        collapsed = TRUE,
-        div(
-          class = "ped-plot",
-          prevPed(id),
-          nextPed(id),
-          plotOutput(NS(id, "pedPlot"))
-        )
-      ),
-
-      box(
-        title = "IBD segment distribution",
-        width = NULL,
-        collapsible = TRUE,
-        collapsed = TRUE,
-        div(
-          class = "segment-plot",
-          plotOutput(NS(id, "jointDistPlot"))
-        )
-      ),
-
-      box(
-        title = "Outlier diagnostics",
-        width = NULL,
-        collapsible = TRUE,
-        collapsed = TRUE,
-        div(
-          class = "textbox",
-          uiOutput(NS(id, "outlierInfo"))
-        )
+    box(
+      title = "Outlier diagnostics",
+      width = NULL,
+      collapsible = TRUE,
+      collapsed = TRUE,
+      div(
+        class = "textbox",
+        uiOutput(NS(id, "outlierInfo"))
       )
     )
+
   )
 }
 
