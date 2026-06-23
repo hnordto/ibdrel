@@ -648,7 +648,7 @@ classTranslator <- function(class, resolution) {
 
     if (length(rel.half) > 1) {
       rel <- rel.half[2]
-      half.write = "half "
+      half.write = "Half "
     } else {
       rel <- rel.half[1]
       half.write = ""
@@ -658,15 +658,16 @@ classTranslator <- function(class, resolution) {
 
     # Check rel type. If first is numeric (valid), reltype is cousin
     if (is_number(rel.split[1])) {
-      cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
+      #cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
+      cousDeg <- as.numeric(rel.split[1])
       rem <- rel.split[3]
       #rem <- numtimes(as.numeric(rel.split[3]))
 
       if (rem == 0) {
-        rel.write <- paste0(half.write, cousDeg, " cous")
+        rel.write <- paste0(half.write, cousDeg, "C")
 
       } else {
-        rel.write <- paste0(half.write, cousDeg, " cous ", rem, "R")
+        rel.write <- paste0(half.write, cousDeg, "C", rem, "R")
       }
 
 
@@ -679,24 +680,31 @@ classTranslator <- function(class, resolution) {
       }
 
       if (!is.na(rem)) {
-        rel.write <- paste0(half.write, " G*", rem, " avunc")
+        if(rem > 2) {
+          rel.write <- paste0(half.write, "G<sup>", rem, "</sup>-Avuncular")
+        } else {
+          rel.write <- paste0(half.write, "G-Avuncular")
+        }
+
       } else {
-        rel.write <- paste(half.write, "avunc")
+        rel.write <- paste(half.write, "Avuncular")
       }
 
     } else if (rel.split[1] == "S") {
 
-      rel.write <- paste(half.write, "sib")
+      rel.write <- paste(half.write, "Sibling")
 
     } else if (rel.split[1] == "L") {
       linDeg <- as.integer(strsplit(rel, "L")[[1]][2])
 
-      if (linDeg > 2) {
-        rel.write <- paste0("G*", linDeg-1, " parent")
+      if (linDeg > 3) {
+        rel.write <- paste0("G<sup>", linDeg-2, "</sup>-Grandparent")
+      } else if(linDeg == 3) {
+        rel.write <- paste0("G-", "Grandparent")
       } else if (linDeg == 2) {
-        rel.write <- paste0("G parent")
+        rel.write <- paste0("Grandparent")
       } else {
-        rel.write <- paste0("parent")
+        rel.write <- paste0("Parent")
       }
     }
 
