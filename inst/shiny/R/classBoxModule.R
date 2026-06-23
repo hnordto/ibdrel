@@ -45,10 +45,11 @@ nextPed = function(id) {
 classBoxUI = function(id) {
 
   bs4Card(
-    title = "Analysis",
+    title = "Plot",
     width = NULL,
     collapse = TRUE,
     collapsed = FALSE,
+    status = "olive",
 
     box(
       title = "Pedigrees",
@@ -71,20 +72,13 @@ classBoxUI = function(id) {
       div(
         class = "segment-plot",
         plotOutput(NS(id, "jointDistPlot"))
-      )
-    ),
-
-    box(
-      title = "Outlier diagnostics",
-      width = NULL,
-      collapsible = TRUE,
-      collapsed = TRUE,
-      div(
-        class = "textbox",
-        uiOutput(NS(id, "outlierInfo"))
+      ),
+      footer = tagList(
+        div(
+          uiOutput(NS(id, "outlierInfo"))
+        )
       )
     )
-
   )
 }
 

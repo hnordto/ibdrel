@@ -7,26 +7,39 @@
   margin: 0rem 0rem 0rem 0.75rem;
 }
 
+.box-title {
+  display: flex;
+  align-items: center;
+}
+
+
+.rightcolumn {
+  margin-left: auto;
+}
+
+.card-body {
+  padding: 0.75rem 1.25rem;
+}
+
 .input-box {
   overflow-x:auto;
 }
 
 table.dataTable td {
-  white-space: nowrap;
+  white-space: nowrap!important;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-table.dataTable {
-  font-size: clamp(12px, 1.2vw, 14px);
+td.bold-col {
+  font-weight: bold;
 }
+
 
 .progress-bar {
   display: none !important!;
 }
 
-.highlight-row { background-color: #ffeaa7 !important; }
-.clickable-cell { cursor:pointer; display:block; width:100%; height:100%;}
 
 .main-container {
   font-size: 0.8rem;
@@ -46,12 +59,22 @@ table.dataTable {
   margin-bottom: 1rem!important;
 }
 
-/* Likelihood box module */
-
-
-div.card-header .box-header {
-  display:none!important;
+.btn-olive {
+  color: #4e4e4e;
+  font-weight: 500;
 }
 
+.btn-olive.active {
+  background-color: #3d9970;
+  color: #FFFFFF;
+  font-weight: 700;
+}
 
+.btn-olive:hover {
+  background-color: #3d99704d;
+}
 
+.bttn-jelly.bttn-royal {
+  background-color: #FFFFFF;
+  color: #3d9970;
+}

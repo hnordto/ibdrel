@@ -5,9 +5,10 @@ helpWidget = function(id) {
       label = NULL,
       style = "jelly",
       size = "sm",
-      icon = icon("question")
+      icon = icon("question"),
+      color = "royal"
     ),
-    title = "See help on this panel."
+    title = "See help on this panel"
   )
 }
 
@@ -36,24 +37,27 @@ checkLikelihood = function(likelihood) {
 }
 
 likelihoodBoxUI = function(id) {
-
   bs4Card(
     id = NS(id, "likelihoodBox"),
-    title = div(
-      "Relatedness",
-      div(w_resolution(id))
+    title = div(class = "box-title",
+      div(class = "leftcolumn", "Relatedness"),
+      div(class = "rightcolumn", helpWidget(id))
     ),
     width = NULL,
     collapsible = FALSE,
     status = "olive",
 
-    DT::DTOutput(NS(id, "resTable")),
+    div(w_resolution(id)),
 
-    checkboxGroupInput(NS(id, "likelihoodTableSettings"), "",
-                       c("Normalize" = "normalize",
-                         "Filter" = "filter"),
-                       selected = "normalize",
-                       inline = TRUE)
+    DT::DTOutput(NS(id, "resTable"),
+                 width = "fit-content"),
+    footer = div(
+      checkboxGroupInput(NS(id, "likelihoodTableSettings"), "",
+                         c("Normalize" = "normalize",
+                           "Filter" = "filter"),
+                         selected = "normalize",
+                         inline = TRUE)
+    )
   )
 }
 
@@ -117,15 +121,16 @@ computeLikelihoodTable <- function(data, resolution) {
   threshold = data[["mdistthreshold"]][[resolution]]
   metadata = data[["metadata"]]
 
+  if (normalize) {
+    likelihoods = ibdrel::normalizeLikelihoods(likelihoods)
+  }
+
 
   if (filter) {
     inlier.classes <- names(which(mdists < threshold))
     likelihoods <- likelihoods[inlier.classes]
   }
 
-  if (normalize) {
-    likelihoods = ibdrel::normalizeLikelihoods(likelihoods)
-  }
 
   likelihoods <- sort(likelihoods, decreasing = TRUE)
   #classlabels <- sapply(names(likelihoods), ibdrel::classTranslator, resolution)
@@ -160,7 +165,7 @@ computeLikelihoodTable <- function(data, resolution) {
   df <- data.frame(Rank = seq_along(likelihoods),
                    Outlier = isoutlier,
                    Class = names(likelihoods),
-                   Likelihood = round(likelihoods, 2))
+                   C = round(likelihoods, 2))
 
   if (resolution == "eqclass.detailed") {
     df <- cbind(df,
@@ -204,7 +209,11 @@ computeLikelihoodTable <- function(data, resolution) {
     "&#9989;",
     "&#10060;"
   )
+
   df$Class <- classlabels[df$Class]
+  colnames(df)[1:2] <- c(" ", " ")
+  colnames(df)[3] <- class_rename
+
   #colnames(df)[colnames(df) == "Rank"] <- ""
   #colnames(df)[colnames(df) == "Outlier"] <- ""
   #colnames(df)[colnames(df) == "Class"] <- class_rename
@@ -229,17 +238,15 @@ likelihoodTable <- function(df) {
     selection = "single",
     options = list(
       dom = "t",
-      columnDefs = list(
-        list(width = "5%", targets = which(names(df) == "Rank") - 1),
-        list(width = "5%", targets = which(names(df) == "Outlier") - 1),
-        list(width = "30%", targets = which(names(df) == "Class") -1),
-        list(width = "10%", targets = which(names(df) == "Likelihood") - 1)
-      ),
-      autoWidth = TRUE,
+      autoWidth = FALSE,
+      ordering = FALSE,
       scrollX = TRUE,
-      scrollY = TRUE,
+      scrollY = "500px",
       scrollCollapse = TRUE,
-      paging = FALSE
+      paging = FALSE,
+      columnDefs = list(
+        list(className = "bold-col", targets = 3)
+      )
     ),
     class = "compact stripe hover"
   )

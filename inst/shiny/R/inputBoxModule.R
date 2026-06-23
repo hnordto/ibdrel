@@ -23,6 +23,8 @@ suppressPackageStartupMessages({
 peds = ibdrel::ibdrel_unilineal$peds
 
 annotation <- sapply(peds, annotatePedigree)
+annotation.readable <- sapply(annotation, classTranslator, "eqclass.detailed")
+names(annotation) <- annotation.readable
 names(peds) <- annotation
 
 segmentData = ibdrel::ibdrel_unilineal$segments
@@ -34,17 +36,34 @@ input.types <- c("Segments" = "segments", "Summaries" = "summaries")
 
 inputBoxUI <- function(id) {
 
+  tags$script(HTML("
+  Shiny.addCustomMessageHandler('clickFile', function(message) {
+    document.querySelector('[id$=\"segfile\"]').click();
+  });
+  "))
+
   bs4Card(
     title = "IBD Data",
+    status = "olive",
     width = NULL,
     collapse = TRUE,
     collapsed = FALSE,
-    verbatimTextOutput(NS(id, "summaryField")),
-    verbatimTextOutput(NS(id, "segmentsField")),
+    uiOutput(NS(id, "summaryField")),
+    uiOutput(NS(id, "segmentsField")),
+
+    # Hidden upload
+    div(
+      style = "display: none;",
+      fileInput("segfile", NULL)
+    ),
+
     footer = div(
-      actionBttn(NS(id,"edit"), icon("edit"), style = "jelly", color = "primary", size = "m"),
-      actionBttn(NS(id,"load"), icon("folder-open"), style = "jelly", color = "primary", size = "m"),
-      actionBttn(NS(id,"example"), icon("dice"), style = "jelly", color = "warning", size = "m")
+      actionBttn(NS(id,"edit"), icon("edit"), style = "jelly", color = "primary", size = "m",
+                 title = "Edit input"),
+      actionBttn(NS(id,"load"), icon("folder-open"), style = "jelly", color = "primary", size = "m",
+                 title = "Upload"),
+      actionBttn(NS(id,"example"), icon("dice"), style = "jelly", color = "warning", size = "m",
+                 title = "Simulate example")
     )
   )
 
@@ -197,7 +216,7 @@ inputBoxServer = function(id, data) {
 
     # Likelihood computation
     observe({
-      req(!is.null(input$segmentInput))
+      req(!is.null(segment_input()))
       req(data[["cutoff"]])
       req(data[["outlierThreshold"]])
       req(data[["featureSelection"]])
@@ -209,7 +228,7 @@ inputBoxServer = function(id, data) {
       selected_features = data[["featureSelection"]]
 
       if(input_type == "segments") {
-        obs = as.numeric(input$segmentInput |>
+        obs = as.numeric(segment_input() |>
                            strsplit("\n") |>
                            unlist())
         obs = obs[obs >= cutoff]
@@ -264,44 +283,64 @@ inputBoxServer = function(id, data) {
 
     observeEvent(input$edit, {
       input_type = data[["inputType"]]
-      showModal(modalDialog(
-        if(input_type == "segments") {
-          tagList(
-            uiOutput(NS(id, "segments_ui"))
+
+      if (input_type == "segments") {
+        showModal(modalDialog(
+          uiOutput(NS(id, "segments_ui")),
+          footer = tagList(
+            actionButton(NS(id, "save_input_segments"), "Save")
           )
-        } else if(input_type == "summaries") {
-          tagList(
-            uiOutput(NS(id, "summaries_ui"))
-          )
-        }
-      ))
+        ))
+      } else if (input_type == "summaries") {
+        showModal(modalDialog(
+          uiOutput(NS(id, "summaries_ui"))
+        ))
+      }
+    })
+
+
+    observeEvent(input$load, {
+      input_type = data[["inputType"]]
+
+      if (input_type == "segments") {
+
+        showModal(modalDialog(
+          fileInput(NS(id, "segfile"), NULL,
+                    width = "100%"),
+          easyClose = TRUE
+        ))
+      }
+
+    })
+
+    observeEvent(input$segfile, {
+      x = scan(input$segfile$datapath,
+               what = numeric(),
+               sep = ",")
+      segment_input(paste(x, collapse = "\n"))
     })
 
     observeEvent(input$example, {
       showModal(modalDialog(
-              selectInput(
-                inputId = NS(id,"simrel"),
-                label = "Relationship",
-                choices = annotation
-              ),
-              actionButton(
-                inputId = NS(id,"simulateButton"),
-                label = "Simulate",
-                size = "sm",
-                width = "100%",
-                style = "simple",
-                icon = icon("check")
-             )
+        selectInput(
+        inputId = NS(id,"simrel"),
+        width = "100%",
+        label = "Relationship",
+        choices = annotation
+      ),
+      footer = tagList(
+        actionButton(
+          inputId = NS(id,"simulateButton"),
+          label = "Simulate",
+          size = "sm",
+          width = "100%",
+          style = "simple",
+          icon = icon("check")
+          )
+        )
       ))
     })
-
-
-
-    # Simulate example
-
-
     observeEvent(input$simulateButton, {
-
       ped = data[["peds"]][[input$simrel]]
       simids = ibdrel::identifyLeaves(ped)
 
@@ -311,54 +350,53 @@ inputBoxServer = function(id, data) {
         ibdsim2::segmentStats(returnAll = TRUE)
 
       lens = segs$allSegs |> round(digits = 4)
+      segment_input(paste(lens, collapse ="\n"))
 
-      updateTextAreaInput(session, NS(id,"segmentInput"), value = paste(lens, collapse = "\n"))
-
-    })
-
-    # Load from file
-
-    observeEvent(input$segfile, {
-      x = scan(input$segfile$datapath,
-               what = numeric(),
-               sep = ",")
-      updateTextAreaInput(session, "segmentInput", value = paste(x, collapse = "\n"))
+      removeModal()
     })
 
     # Segment input UI
 
-    output$summaryField <- renderPrint({
+    output$summaryField <- renderUI({
 
-      if(is.null(data[["obs"]])) return(cat("No data loaded."))
+      if(is.null(data[["obs"]])) return(tags$p("No data loaded."))
+
+      segments.write = if (length(data[["obs"]]) == 1) "segment" else "segments"
 
       if(data[["inputType"]] == "segments") {
-        cat(length(data[["obs"]]), "segments with",
+        tags$p(length(data[["obs"]]), segments.write, "above threshold", data[["cutoff"]], " cM with",
                              sum(data[["obs"]]), "cM total length.")
       } else if(data[["inputType"]] == "summaries") {
         count = if ("count" %in% names(data[["obs"]])) data[["obs"]][["count"]] else NULL
         total = if("total" %in% names(data[["obs"]])) data[["obs"]][["total"]] else NULL
 
         if(all(c("count", "total")  %in% names(data[["obs"]]))) {
-          cat(count, "segments with", total, "cM total length.")
+          tags$p(count, "segments with", total, "cM total length.")
         } else if("count" %in% names(data[["obs"]])) {
-          cat(count, "segments")
+          tags$p(count, "segments")
         } else if("total" %in% names(data[["obs"]])) {
-          cat(total, "cM total length.")
+          tags$p(total, "cM total length.")
         } else {
-          cat(NULL)
+          tags$p("")
         }
       }
     })
 
-    output$segmentsField <- renderPrint({
+    output$segmentsField <- renderUI({
       req(data[["obs"]])
-      if(data[["inputType"]] != "segments") return(NULL)
+      if(data[["inputType"]] != "segments") return(tags$p(""))
 
-      cat("Individual segments:", paste(data[["obs"]], collapse = ","))
+      tags$p("Individual segments:", paste(round(data[["obs"]],2), collapse = ","))
 
     })
 
 
+    # Remember segment input
+    segment_input <- reactiveVal(NULL)
+    observeEvent(input$save_input_segments, {
+      segment_input(input$segmentInput)
+      removeModal()
+    }, ignoreInit = TRUE)
 
     output$segments_ui <- renderUI({
       req(data[["inputType"]])
@@ -369,7 +407,9 @@ inputBoxServer = function(id, data) {
         inputId = NS(id,"segmentInput"),
         label = "Segment lengths (cM)",
         rows = 8,
-        placeholder = "One segment per line, in cM"
+        width = "100%",
+        placeholder = "One segment per line, in cM",
+        value = segment_input()
       )
     })
 

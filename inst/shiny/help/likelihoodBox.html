@@ -16,13 +16,18 @@ and number of segments:
 <li>❌ if input is an outlier.</li>
 </ul></li>
 <li><strong>Class</strong>: Name of the relationship.</li>
-<li><strong>Lik</strong>: Estimated likelihood of the relationship:
+<li><strong>C</strong>: Confidence score of the relationship:
 <ul>
-<li>Normalized: Probability of the class given the input IBD data.</li>
-<li>Unnormalized: Probability of the input IBD data given the class.
-Reported on natural log scale.</li>
+<li>Normalized: Scores normalized to sum to 1.</li>
+<li>Unnormalized: Raw likelihood estimates, reported on natural
+logarithmic scale.</li>
 </ul></li>
 </ul>
+<p>The confidence score quantifies the model’s belief in each class
+given the input data. It should not be interpreted as a true probability
+estimate of the class, but rather used as a coarse estimate of how
+likely each class is, which can be used for comparisons between
+classes.</p>
 <p>Additional columns display additional information about the class if
 applicable, such as kappa coefficients, kinship coefficients, and
 relationship degree.</p>
@@ -47,5 +52,5 @@ individuals are IBD.</li>
 <li><code>Deg</code>: The relationship degree.</li>
 </ul>
 <p><strong>Details</strong></p>
-<p>More information can be found in the onlie documentation or the
+<p>More information can be found in the online documentation or the
 <code>ibdrel</code> package vignettes.</p>

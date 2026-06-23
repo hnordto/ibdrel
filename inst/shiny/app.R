@@ -35,20 +35,14 @@ ui = bs4DashPage(
       tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
     ),
 
-
     fluidRow(
-
-      # Input
       column(
-        width = 5,
+        width = 6,
         inputBoxUI("input"),
         classBoxUI("classInfo")
       ),
-
-      # Likelihood table
       column(
-        width = 7,
-
+        width = 6,
         likelihoodBoxUI("likelihoodTable")
       )
     )
@@ -119,9 +113,6 @@ server <- function(input, output, session) {
     data[["isFeatures"]] = ifelse(settings$inputType == "segments", F, T)
     data[["outlierThreshold"]] = settings$outlierThreshold
   })
-
-
-
 }
 
 shinyApp(ui, server)

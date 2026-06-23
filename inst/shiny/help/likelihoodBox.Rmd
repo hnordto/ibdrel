@@ -13,9 +13,11 @@ Each row corresponds to a predicted genetic relationship class. Columns:
   + &#9989; if input is *not* an outlier. 
   + &#10060; if input is an outlier.
 - __Class__: Name of the relationship.
-- __Lik__: Estimated likelihood of the relationship:
-  + Normalized: Probability of the class given the input IBD data.
-  + Unnormalized: Probability of the input IBD data given the class. Reported on natural log scale. 
+- __C__: Confidence score of the relationship:
+  + Normalized: Scores normalized to sum to 1.
+  + Unnormalized: Raw likelihood estimates, reported on natural logarithmic scale. 
+
+The confidence score quantifies the model's belief in each class given the input data. It should not be interpreted as a true probability estimate of the class, but rather used as a coarse estimate of how likely each class is, which can be used for comparisons between classes.  
 
 Additional columns display additional information about the class if applicable, such as kappa coefficients, kinship coefficients, and relationship degree.
 
@@ -31,4 +33,4 @@ Prediction is carried out at different resolutions, with distinct sets of predic
 
 **Details**
 
-More information can be found in the onlie documentation or the `ibdrel` package vignettes.
+More information can be found in the online documentation or the `ibdrel` package vignettes.
