@@ -8,4 +8,4 @@ BULTIN.MODELS <- c("ibdrel-unilineal")
 
 #'
 #'@export
-VALID.FEATURES <- c("count", "total", "median", "longest", "shortest")
+VALID.FEATURES <- c("count", "total", "longest", "shortest", "length")
