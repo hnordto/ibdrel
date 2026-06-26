@@ -153,10 +153,12 @@ computeLikelihoodTable <- function(data, resolution) {
 
   classlabels <- setNames(classlabels, names(likelihoods))
 
-  eqclass = as.character(metadata.subset$eqclass)
-  eqclass = sapply(eqclass, function(x) {
-    classTranslator(x, "eqclass")
-  })
+  if (resolution == "eqclass.detailed") {
+    eqclass = as.character(metadata.subset$eqclass)
+    eqclass = sapply(eqclass, function(x) {
+      classTranslator(x, "eqclass")
+    })
+  }
 
   kappa0 = as.character(MASS::fractions(metadata.subset$kappa0))
   kappa1 = as.character(MASS::fractions(metadata.subset$kappa1))
@@ -207,7 +209,7 @@ computeLikelihoodTable <- function(data, resolution) {
   }
 
   if (resolution == "degree") {
-    class_rename = "Deg"
+    class_rename = "Degree"
   }
 
   df$Outlier <- ifelse(
