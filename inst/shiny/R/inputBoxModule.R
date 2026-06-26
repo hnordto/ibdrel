@@ -32,7 +32,13 @@ names(segmentData) <- annotation
 metadata = ibdrel::pedsMetadata(peds)
 
 supported.features <- c("count", "total", "median", "longest", "shortest")
-input.types <- c("Segments" = "segments", "Summaries" = "summaries")
+input.types <- c("Segments" = "segments", "Summaries (not yet supported!)" = "summaries")
+
+featureSelection.default = list("eqclass.detailed" = c("count", "length"),
+                                "eqclass" = c("count", "length"),
+                                "kappa" = c("count", "total"),
+                                "kinship" = c("count", "total"),
+                                "degree" = c("count", "total"))
 
 inputBoxUI <- function(id) {
 
@@ -184,6 +190,7 @@ inputBoxServer = function(id, data) {
 
       cutoff = data[["cutoff"]]
       featureSelection = data[["featureSelection"]]
+      input_type = data[["inputType"]]
 
       resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
       data[["resolutions"]] <- resolutions
@@ -195,14 +202,46 @@ inputBoxServer = function(id, data) {
       data[["metadata"]] = metadata
       data[["peds"]] = peds
 
-      data[["features"]] <- lapply(data[["segments"]], function(x) {
-        lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
-      })
+     # data[["features"]] <- lapply(data[["segments"]], function(x) {
+    #    lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
+    #  })
 
-      data[["pdfs"]] <- lapply(data[["segments"]], function(x) {
-        lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
-      })
+      if (input_type == "segments") {
+        features <- lapply(names(data[["segments"]]), function(nm) {
+          x <- data[["segments"]][[nm]]
+          lapply(x, prepareFeatures, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
+        })
+        names(features) = names(data[["segments"]])
+        data[["features"]] <- features
 
+
+
+        #  data[["pdfs"]] <- lapply(data[["segments"]], function(x) {
+        #    lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
+        #  })
+
+        pdfs <- lapply(names(data[["segments"]]), function(nm) {
+          x <- data[["segments"]][[nm]]
+          lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
+        })
+        names(pdfs) <- names(data[["segments"]])
+        data[["pdfs"]]  <- pdfs
+      } else if (input_type == "summaries") {
+        features <- lapply(data[["segments"]], function(x) {
+          lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
+        })
+
+        pdfs <- lapply(data[["segments"]], function(x) {
+          lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
+        })
+
+      }
+
+      # Features, only count+total for mdists
+      ct <- lapply(data[["segments"]], function(x) {
+        lapply(x, prepareFeatures, featureSel = c("count", "total"), cutoff = cutoff)
+      })
+      data[["ct"]] <- ct
 
     })
 
@@ -238,14 +277,14 @@ inputBoxServer = function(id, data) {
           classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
         })
 
-        data[["mdists"]] = lapply(data[["features"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = selected_features,
+        data[["mdists"]] = lapply(data[["ct"]], function(x) {
+          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
                         threshold = outlierThreshold, isFeatures = is_features)
           sapply(l, `[[`, "dist")
         })
 
-        data[["mdistthreshold"]] = lapply(data[["features"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = selected_features,
+        data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
+          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
                         threshold = outlierThreshold, isFeatures = is_features)
           sapply(l, `[[`, "threshold")
         })
@@ -265,14 +304,14 @@ inputBoxServer = function(id, data) {
           classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
         })
 
-        data[["mdists"]] = lapply(data[["features"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = selected_features,
+        data[["mdists"]] = lapply(data[["ct"]], function(x) {
+          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
                         threshold = outlierThreshold, isFeatures = is_features)
           sapply(l, `[[`, "dist")
         })
 
-        data[["mdistthreshold"]] = lapply(data[["features"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = selected_features,
+        data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
+          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
                         threshold = outlierThreshold, isFeatures = is_features)
           sapply(l, `[[`, "threshold")
         })
@@ -386,7 +425,7 @@ inputBoxServer = function(id, data) {
       req(data[["obs"]])
       if(data[["inputType"]] != "segments") return(tags$p(""))
 
-      tags$p("Individual segments:", paste(round(data[["obs"]],2), collapse = ","))
+      tags$p("Individual segments:", paste(round(data[["obs"]],2), collapse = ", "))
 
     })
 
@@ -453,7 +492,7 @@ summaries_obs <- list(
 
 feature_specs <- list(
   count = list(
-    label = "Numer of segments (count)",
+    label = "Number of segments (count)",
     value = NA,
     min = 0,
     step = 1

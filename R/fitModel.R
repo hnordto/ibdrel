@@ -36,22 +36,32 @@
 #'
 #' @export
 fitModel <- function(data = NULL,
-                     features = c("count", "total"),
+                     features = "default",
                      cutoff = 7) {
   if (is.null(data)) {
     data = loadData()
   }
 
-  if (any(!(features %in% VALID.FEATURES))) {
-    stop("Invalid feature(s). Must be one or multiple of ",
-         paste(VALID.FEATURES, collapse = ", "))
-  }
+  if (features == "default") {
+    pdfs = lapply(names(data), function(nm) {
+      x <- data[[nm]]
+      lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]],
+             cutoff = cutoff)
+    })
+    names(pdfs) <- names(data)
+  } else {
+    if (any(!(features %in% VALID.FEATURES))) {
+      stop("Invalid feature(s). Must be one or multiple of ",
+           paste(VALID.FEATURES, collapse = ", "))
+    }
 
-  pdfs = lapply(data, function(x) {
-    lapply(x, preparePdfs,
-           featureSel = features,
-           cutoff = cutoff)
-  })
+    pdfs = lapply(data, function(x) {
+      lapply(x, preparePdfs,
+             featureSel = features,
+             cutoff = cutoff)
+    })
+
+  }
 
   model = list(
     pdfs = pdfs,
@@ -62,3 +72,9 @@ fitModel <- function(data = NULL,
   return (model)
 
 }
+
+featureSelection.default = list("eqclass.detailed" = c("count", "length"),
+                                "eqclass" = c("count", "length"),
+                                "kappa" = c("count", "total"),
+                                "kinship" = c("count", "total"),
+                                "degree" = c("count", "total"))

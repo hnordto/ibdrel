@@ -29,15 +29,12 @@ safe_min <- function(x, default = 0) {
   if (length(x) == 0) default else min(x)
 }
 
-safe_median <- function(x, default = 0) {
-  if(length(x) == 0) default else median(x)
-}
-
 safe_lengths <- function(lst) {
   sapply(lst, function(x) {
     if (identical(x,0)) 0 else length(x)
   })
 }
+
 
 #'
 #'@export
@@ -48,10 +45,10 @@ preparePdfs = function(lengthData, featureSel = c("count", "total"), cutoff = 0,
 
   pdfs <- list(
     count = if ("count" %in% featureSel) lengths(lengthData) |>
-      density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
+      density(from = 0, bw = "nrd0", kernel = "rectangular") |> approxfun(rule = 2) else NULL,
     total = if ("total" %in% featureSel) vapply(lengthData, sum, FUN.VALUE = 1) |>
       density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
-    median = if ("median" %in% featureSel) vapply(lengthData, safe_median, FUN.VALUE = 1) |>
+    length = if ("length" %in% featureSel) unlist(lengthData, use.names = FALSE) |>
       density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
     longest = if ("longest" %in% featureSel) longestPdf = vapply(lengthData, safe_max, FUN.VALUE = 1) |>
       density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
@@ -80,8 +77,8 @@ classProb = function(obs, pdfs, obsType = "segments", log = T) {
       probs = c(probs, pdfs$total(sum(obs)))
     }
 
-    if ("median" %in% var.names) {
-      probs = c(probs, pdfs$median(safe_median(obs)))
+    if ("length" %in% var.names) {
+      probs = c(probs, pdfs$length(obs))
     }
 
     if ("longest" %in% var.names) {
@@ -98,10 +95,6 @@ classProb = function(obs, pdfs, obsType = "segments", log = T) {
 
     if ("total" %in% var.names) {
       probs = c(probs, pdfs$total(obs$total))
-    }
-
-    if ("median" %in% var.names) {
-      probs = c(probs, pdfs$median(obs$median))
     }
 
     if ("longest" %in% var.names) {
