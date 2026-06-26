@@ -659,15 +659,15 @@ classTranslator <- function(class, resolution) {
     # Check rel type. If first is numeric (valid), reltype is cousin
     if (is_number(rel.split[1])) {
       #cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
-      cousDeg <- as.numeric(rel.split[1])
+      cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
       rem <- rel.split[3]
       #rem <- numtimes(as.numeric(rel.split[3]))
 
       if (rem == 0) {
-        rel.write <- paste0(half.write, cousDeg, "C")
+        rel.write <- paste0(half.write, cousDeg, " cousins")
 
       } else {
-        rel.write <- paste0(half.write, cousDeg, "C", rem, "R")
+        rel.write <- paste0(half.write, cousDeg, " cousins ", rem, "R")
       }
 
 
@@ -681,9 +681,9 @@ classTranslator <- function(class, resolution) {
 
       if (!is.na(rem)) {
         if(rem > 2) {
-          rel.write <- paste0(half.write, "G<sup>", rem, "</sup>-Avuncular")
+          rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
         } else {
-          rel.write <- paste0(half.write, "G-Avuncular")
+          rel.write <- paste0(half.write, "G avuncular")
         }
 
       } else {
@@ -698,9 +698,9 @@ classTranslator <- function(class, resolution) {
       linDeg <- as.integer(strsplit(rel, "L")[[1]][2])
 
       if (linDeg > 3) {
-        rel.write <- paste0("G<sup>", linDeg-2, "</sup>-Grandparent")
+        rel.write <- paste0("G<sup>", linDeg-2, "</sup> grandparent")
       } else if(linDeg == 3) {
-        rel.write <- paste0("G-", "Grandparent")
+        rel.write <- paste0("G ", "grandparent")
       } else if (linDeg == 2) {
         rel.write <- paste0("Grandparent")
       } else {
