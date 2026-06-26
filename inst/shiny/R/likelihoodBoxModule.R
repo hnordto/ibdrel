@@ -153,6 +153,11 @@ computeLikelihoodTable <- function(data, resolution) {
 
   classlabels <- setNames(classlabels, names(likelihoods))
 
+  eqclass = as.character(metadata.subset$eqclass)
+  eqclass = sapply(eqclass, function(x) {
+    classTranslator(x, "eqclass")
+  })
+
   kappa0 = as.character(MASS::fractions(metadata.subset$kappa0))
   kappa1 = as.character(MASS::fractions(metadata.subset$kappa1))
   kappa2 = as.character(MASS::fractions(metadata.subset$kappa2))
@@ -165,14 +170,15 @@ computeLikelihoodTable <- function(data, resolution) {
   df <- data.frame(Rank = seq_along(likelihoods),
                    Outlier = isoutlier,
                    Class = names(likelihoods),
-                   C = round(likelihoods, 2))
+                   Conf = round(likelihoods, 2))
 
   if (resolution == "eqclass.detailed") {
     df <- cbind(df,
+                Rel = eqclass,
                 Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[5:6] <- c("\u03BA", "\u03C6")
+    colnames(df)[6:7] <- c("\u03BA", "\u03C6")
     class_rename = "Ped"
   }
 
@@ -181,7 +187,7 @@ computeLikelihoodTable <- function(data, resolution) {
                 Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[5:6] <- c("\u03BA", "\u03C6")
+    colnames(df)[6:7] <- c("\u03BA", "\u03C6")
     class_rename = "Rel"
   }
 
@@ -189,7 +195,7 @@ computeLikelihoodTable <- function(data, resolution) {
     df <- cbind(df,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[5] <- c("\u03C6")
+    colnames(df)[6] <- c("\u03C6")
     class_rename = "\u03BA"
   }
 
@@ -245,7 +251,8 @@ likelihoodTable <- function(df) {
       scrollCollapse = TRUE,
       paging = FALSE,
       columnDefs = list(
-        list(className = "bold-col", targets = 3)
+        list(className = "bold-col", targets = 3),
+        list(className = "dt-center", targets = "_all")
       )
     ),
     class = "compact stripe hover"

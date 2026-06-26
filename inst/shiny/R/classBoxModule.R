@@ -17,6 +17,7 @@ checkSelectedClass = function(selected) {
 }
 
 prevPed = function(id) {
+
   tooltip(
     actionBttn(
       inputId = NS(id, "prevPed"),
@@ -30,6 +31,7 @@ prevPed = function(id) {
 }
 
 nextPed = function(id) {
+
   tooltip(
     actionBttn(
       inputId = NS(id, "nextPed"),
@@ -51,34 +53,47 @@ classBoxUI = function(id) {
     collapsed = FALSE,
     status = "olive",
 
-    box(
-      title = "Pedigrees",
-      width = NULL,
-      collapsible = TRUE,
-      collapsed = TRUE,
-      div(
-        class = "ped-plot",
-        prevPed(id),
-        nextPed(id),
+    uiOutput(NS(id, "classSummary")),
+    fluidRow(
+      column(
+        width = 6,
+        uiOutput(NS(id, "pedControls")),
         plotOutput(NS(id, "pedPlot"))
-      )
-    ),
-
-    box(
-      title = "IBD segment distribution",
-      width = NULL,
-      collapsible = TRUE,
-      collapsed = TRUE,
-      div(
-        class = "segment-plot",
-        plotOutput(NS(id, "jointDistPlot"))
       ),
-      footer = tagList(
-        div(
-          uiOutput(NS(id, "outlierInfo"))
-        )
+      column(
+        width = 6,
+        plotOutput(NS(id,"jointDistPlot"))
       )
     )
+
+    #box(
+    #  title = "Pedigrees",
+    #  width = NULL,
+    #  collapsible = TRUE,
+    #  collapsed = TRUE,
+    #  div(
+    #    class = "ped-plot",
+    #    prevPed(id),
+    #    nextPed(id)
+    #   # plotOutput(NS(id, "pedPlot"))
+    #  )
+    #),
+
+    #box(
+    #  title = "IBD segment distribution",
+    #  width = NULL,
+    #  collapsible = TRUE,
+    #  collapsed = TRUE,
+    #  div(
+    #    class = "segment-plot"
+    #  #  plotOutput(NS(id, "jointDistPlot"))
+    #  ),
+    #  footer = tagList(
+    #    div(
+    #      uiOutput(NS(id, "outlierInfo"))
+    #    )
+    #  )
+    # )
   )
 }
 
@@ -95,6 +110,34 @@ classBoxServer = function(id, data) {
       req(data[["selectedClass"]])
       #peds = subset(data[["metadata"]], class == data[["selectedClass"]])[["rel"]]
       #updatePickerInput(session, "selectPedigree", choices = peds)
+
+    })
+
+    observeEvent(data[["selectedTab"]], {
+      data[["selectedClass"]] = NULL
+    })
+
+    # Pedigree plotting
+
+    peds <- reactive({ # Peds in selected class
+      metadata <- data[["metadata"]]
+      peds_all <- data[["peds"]]
+      selected <- subset(metadata, class == data[["selectedClass"]])$rel
+      peds_all[selected]
+    })
+
+    output$classSummary <- renderUI({
+      req(data[["selectedClass"]])
+
+      npeds <- length(peds())
+
+      if (npeds == 1) {
+        tags$p("The selected class contains", npeds, "pedigree.")
+      } else {
+        tags$p("The selected class contains", npeds, "indistinguishable pedigrees.")
+      }
+
+
 
     })
 
@@ -116,14 +159,7 @@ classBoxServer = function(id, data) {
       jointDistPlot(data, resolution, data[["selectedClass"]])
     })
 
-    # Pedigree plotting
 
-    peds <- reactive({ # Peds in selected class
-      metadata <- data[["metadata"]]
-      peds_all <- data[["peds"]]
-      selected <- subset(metadata, class == data[["selectedClass"]])$rel
-      peds_all[selected]
-    })
 
 
 
@@ -136,6 +172,16 @@ classBoxServer = function(id, data) {
     observeEvent(input$nextPed, {
       idx <- current_index()
       if (idx < length(peds())) current_index(idx + 1)
+    })
+
+    output$pedControls <- renderUI({
+      req(data[["selectedClass"]])
+
+      tagList(
+        prevPed(id),
+        helpText(paste0("Pedigree ", current_index(), "/", length(peds()))),
+        nextPed(id)
+      )
     })
 
 
@@ -235,7 +281,7 @@ relationshipTable <- function(data, selected.class) {
 
 jointDistPlot <- function(data, resolution, selected.class) {
 
-  segments = data[["features"]][[resolution]][[selected.class]]
+  segments = data[["ct"]][[resolution]][[selected.class]]
 
   count = segments[["count"]]
   total = segments[["total"]]
@@ -252,7 +298,7 @@ jointDistPlot <- function(data, resolution, selected.class) {
   p <- ggplot2::ggplot(data = df, mapping = aes(x = count, y = total)) +
     geom_jitter(alpha = .5) +
     stat_ellipse(type = "norm", alpha = .75,
-                 level = data[["chisq"]]) + # Chisq when type = "norm"
+                 level = data[["outlierThreshold"]]) + # Chisq when type = "norm"
     labs(x = "Number of segments",
          y = "Total IBD segment length (cM)") +
     theme_bw()
@@ -268,7 +314,7 @@ jointDistPlot <- function(data, resolution, selected.class) {
                   shape = 4, stroke = 2, size = 4, colour = "red2")
   }
 
-  p <- ggExtra::ggMarginal(p, type = "density")
+  #p <- ggExtra::ggMarginal(p, type = "density")
 
   return (p)
 
