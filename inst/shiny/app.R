@@ -1,3 +1,4 @@
+terracotta<-"#E2725B"
 ui = bs4DashPage(
 
   dark = NULL,
@@ -16,7 +17,7 @@ ui = bs4DashPage(
 
     rightUi =  tagList(tags$li(class = "nav-item dropdown",
       div(class = "aligned-row", style = "margin-right: 22.5px; gap: 15px;",
-          actionBttn("settings", icon("gear"), style = "jelly", color = "danger", size = "m")
+          actionBttn("settings", icon("gear"), style = "jelly", color = terracotta, size = "m")
       )
     ))
   ),
