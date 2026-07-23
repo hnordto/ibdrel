@@ -7,14 +7,28 @@
   margin: 0rem 0rem 0rem 0.75rem;
 }
 
-.box-title {
+.box-title-flex {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.leftcolumn {
+  margin-right: auto;
+}
+
+.rightcolumn {
+ margin-left: auto;
+}
+
+.card-header {
+  display: flex !important;
   align-items: center;
 }
 
-
-.rightcolumn {
-  margin-left: auto;
+.card-title {
+  width: 100%;
 }
 
 .card-body {
@@ -77,4 +91,8 @@ td.bold-col {
 .bttn-jelly.bttn-royal {
   background-color: #FFFFFF;
   color: #3d9970;
+}
+
+.bttn-jelly.bttn-danger {
+  background-color: #E35336;
 }
