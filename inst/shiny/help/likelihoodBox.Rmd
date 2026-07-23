@@ -4,32 +4,32 @@ output: html_fragment
 
 **Likelihood table**
 
-Displays the pairwise relationship prediction for the inputted IBD sharing.
+Displays the pairwise relationship predictions for the inputted IBD sharing.
 
-Each row corresponds to a predicted genetic relationship class. Columns:
+Each row corresponds to a predicted genetic relationship class. The columns give the following information:
 
-- Rank
-- __Outlier detection__: Whether the input matches the general pattern observed in simulated data, in terms of total sharing and number of segments:
-  + &#9989; if input is *not* an outlier. 
-  + &#10060; if input is an outlier.
-- __Class__: Name of the relationship.
-- __C__: Confidence score of the relationship:
-  + Normalized: Scores normalized to sum to 1.
-  + Unnormalized: Raw likelihood estimates, reported on natural logarithmic scale. 
+- Rank of the class.
+- __Outlier__: Whether the input deviates from simulated instances of sharing in terms of total IBD and segment counts. Can also be visually inspected through the scatter plot in the *Plots* box. The `Filter` button hides outliers in the table. Values:
+  + &#9989; if input deviates from the majority. Majority is a user-defined quantile threshold that can be changed in *Settings*.
+  + &#10060; if input fits the general pattern.
+- __Class__: Name of the relationship. This is either a pedigree, or some other measurement of relatedness. See below for a list of included class levels. 
+- __C__: Confidence score of the relationship. The confidence square quantifies the model's belief in each class given the input data. It is computed as a likelihood under the simplification that all features are conditionally independent, and should not be interpreted as a true probability estimate of the class. It can however be used as a coarse estimate of how likely each class is. This is for instance useful for comparing classes. The confidence score is either normalized or unnormalized, controlled with the `Normalize` button:
+  + Normalized: Scores normalized to sum to 1 over all classes.
+  + Unnormalized: Raw likelihood estimates, on natural logarithmic scale. 
 
-The confidence score quantifies the model's belief in each class given the input data. It should not be interpreted as a true probability estimate of the class, but rather used as a coarse estimate of how likely each class is, which can be used for comparisons between classes.  
-
-Additional columns display additional information about the class if applicable, such as kappa coefficients, kinship coefficients, and relationship degree.
+Other columns display additional information about the class if applicable, such as kappa coefficients, kinship coefficients, and relationship degree.
 
 **Tab panels**
 
 Prediction is carried out at different resolutions, with distinct sets of predicted classes:
 
-- `Ped`: Pedigree relationships *with* sex-specific ancestral paths up to equivalence. Equivalent relationships are those that are indistinguishable in terms of pairwise IBD sharing. One representative for each equivalence group is displayed.
-- `Rel`: Pedigree relationships *without* sex-specific ancestral paths up to equivalence. Equivalent relationships are those that are indistinguishable in terms of pairwise IBD sharing. One representative for each equivalence group is displayed.
+- `Sex`: Pedigree relationships *with* sex-specific ancestral paths up to equivalence (see below). 
+- `Rel`: Pedigree relationships *without* sex-specific ancestral paths up to equivalence (see below).
 - `Kap`: The kappa coefficients for the relationship. These are the expected probabilities of sharing 0, 1, or 2 alleles IBD at a locus. 
 - `Kin`: The kinship coefficient for the relationship. This is the probability that two alleles chosen randomly from the two individuals are IBD.
 - `Deg`: The relationship degree.
+
+Equivalent relationships are those that are indistinguishable in terms of pairwise IBD sharing. One representative pedigree relationship for each equivalence group is displayed.
 
 **Details**
 

@@ -18,6 +18,20 @@ suppressPackageStartupMessages({
 
 })
 
+helpWidget = function(id) {
+  tooltip(
+    actionBttn(
+      inputId = NS(id, "help"),
+      label = NULL,
+      style = "jelly",
+      size = "sm",
+      icon = icon("question"),
+      color = "royal"
+    ),
+    title = "See help on this panel"
+  )
+}
+
 # Load data XX FIX LATER XX
 
 peds = ibdrel::ibdrel_unilineal$peds
@@ -49,7 +63,10 @@ inputBoxUI <- function(id) {
   "))
 
   bs4Card(
-    title = "IBD Data",
+    title = div(class = "box-title-flex",
+                div(class = "leftcolumn", "IBD Data"),
+                div(class = "rightcolumn", helpWidget(id))
+    ),
     status = "olive",
     width = NULL,
     collapse = TRUE,
@@ -477,6 +494,18 @@ inputBoxServer = function(id, data) {
 
       tagList(ui_list)
 
+    })
+
+    # Help
+    observeEvent(input$help, {
+      shinyalert(
+        className = "helpbox",
+        html = TRUE,
+        text = read_file("help/inputBox.html"),
+        showConfirmButton = FALSE,
+        closeOnClickOutside = TRUE,
+        size = "m"
+      )
     })
 
   })

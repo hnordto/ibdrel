@@ -2,47 +2,50 @@
 
 
 <p><strong>Likelihood table</strong></p>
-<p>Displays the pairwise relationship prediction for the inputted IBD
+<p>Displays the pairwise relationship predictions for the inputted IBD
 sharing.</p>
-<p>Each row corresponds to a predicted genetic relationship class.
-Columns:</p>
+<p>Each row corresponds to a predicted genetic relationship class. The
+columns give the following information:</p>
 <ul>
-<li>Rank</li>
-<li><strong>Outlier detection</strong>: Whether the input matches the
-general pattern observed in simulated data, in terms of total sharing
-and number of segments:
+<li>Rank of the class.</li>
+<li><strong>Outlier</strong>: Whether the input deviates from simulated
+instances of sharing in terms of total IBD and segment counts. Can also
+be visually inspected through the scatter plot in the <em>Plots</em>
+box. The <code>Filter</code> button hides outliers in the table. Values:
 <ul>
-<li>✅ if input is <em>not</em> an outlier.</li>
-<li>❌ if input is an outlier.</li>
+<li>✅ if input deviates from the majority. Majority is a user-defined
+quantile threshold that can be changed in <em>Settings</em>.</li>
+<li>❌ if input fits the general pattern.</li>
 </ul></li>
-<li><strong>Class</strong>: Name of the relationship.</li>
-<li><strong>C</strong>: Confidence score of the relationship:
+<li><strong>Class</strong>: Name of the relationship. This is either a
+pedigree, or some other measurement of relatedness. See below for a list
+of included class levels.</li>
+<li><strong>C</strong>: Confidence score of the relationship. The
+confidence square quantifies the model’s belief in each class given the
+input data. It is computed as a likelihood under the simplification that
+all features are conditionally independent, and should not be
+interpreted as a true probability estimate of the class. It can however
+be used as a coarse estimate of how likely each class is. This is for
+instance useful for comparing classes. The confidence score is either
+normalized or unnormalized, controlled with the <code>Normalize</code>
+button:
 <ul>
-<li>Normalized: Scores normalized to sum to 1.</li>
-<li>Unnormalized: Raw likelihood estimates, reported on natural
-logarithmic scale.</li>
+<li>Normalized: Scores normalized to sum to 1 over all classes.</li>
+<li>Unnormalized: Raw likelihood estimates, on natural logarithmic
+scale.</li>
 </ul></li>
 </ul>
-<p>The confidence score quantifies the model’s belief in each class
-given the input data. It should not be interpreted as a true probability
-estimate of the class, but rather used as a coarse estimate of how
-likely each class is, which can be used for comparisons between
-classes.</p>
-<p>Additional columns display additional information about the class if
+<p>Other columns display additional information about the class if
 applicable, such as kappa coefficients, kinship coefficients, and
 relationship degree.</p>
 <p><strong>Tab panels</strong></p>
 <p>Prediction is carried out at different resolutions, with distinct
 sets of predicted classes:</p>
 <ul>
-<li><code>Ped</code>: Pedigree relationships <em>with</em> sex-specific
-ancestral paths up to equivalence. Equivalent relationships are those
-that are indistinguishable in terms of pairwise IBD sharing. One
-representative for each equivalence group is displayed.</li>
+<li><code>Sex</code>: Pedigree relationships <em>with</em> sex-specific
+ancestral paths up to equivalence (see below).</li>
 <li><code>Rel</code>: Pedigree relationships <em>without</em>
-sex-specific ancestral paths up to equivalence. Equivalent relationships
-are those that are indistinguishable in terms of pairwise IBD sharing.
-One representative for each equivalence group is displayed.</li>
+sex-specific ancestral paths up to equivalence (see below).</li>
 <li><code>Kap</code>: The kappa coefficients for the relationship. These
 are the expected probabilities of sharing 0, 1, or 2 alleles IBD at a
 locus.</li>
@@ -51,6 +54,9 @@ is the probability that two alleles chosen randomly from the two
 individuals are IBD.</li>
 <li><code>Deg</code>: The relationship degree.</li>
 </ul>
+<p>Equivalent relationships are those that are indistinguishable in
+terms of pairwise IBD sharing. One representative pedigree relationship
+for each equivalence group is displayed.</p>
 <p><strong>Details</strong></p>
 <p>More information can be found in the online documentation or the
 <code>ibdrel</code> package vignettes.</p>

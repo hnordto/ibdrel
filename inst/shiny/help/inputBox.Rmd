@@ -1,0 +1,11 @@
+---
+output: html_fragment
+---
+
+**Input**
+
+`IBDrel` takes [identity by descent (IBD)](https://isogg.org/wiki/Identical_by_descent) segment lengths for a single pairwise genetic match as input. The lengths are measured in [centiMorgans (cM)](https://isogg.org/wiki/CentiMorgan). Three input formats are accepted:
+
+- __Free text__: Manually enter segment lengths into a text field, one segment length per line.
+- __File upload__: Upload a text file (`.txt`) with one segment length per line. 
+- __Simulate example__: Simulate an example for any pedigree relationship included by default in `IBDrel` using [`ibdsim2`](https://github.com/magnusdv/ibdsim2).
