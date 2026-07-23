@@ -17,7 +17,7 @@ w_resolution = function(id) {
     radioGroupButtons(
       inputId = NS(id,"resTabs"),
       label = NULL,
-      choices = c("Ped" = "eqclass.detailed",
+      choices = c("Sex" = "eqclass.detailed",
                   "Rel" = "eqclass",
                   "Kap" = "kappa",
                   "Kin" = "kinship",
@@ -39,7 +39,7 @@ checkLikelihood = function(likelihood) {
 likelihoodBoxUI = function(id) {
   bs4Card(
     id = NS(id, "likelihoodBox"),
-    title = div(class = "box-title",
+    title = div(class = "box-title-flex",
       div(class = "leftcolumn", "Relatedness"),
       div(class = "rightcolumn", helpWidget(id))
     ),
@@ -181,7 +181,7 @@ computeLikelihoodTable <- function(data, resolution) {
                 Kinship = kinship,
                 Degree = degree)
     colnames(df)[6:7] <- c("\u03BA", "\u03C6")
-    class_rename = "Ped"
+    class_rename = "Sex"
   }
 
   if (resolution == "eqclass") {
