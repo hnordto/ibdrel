@@ -13,7 +13,7 @@ Each row corresponds to a predicted genetic relationship class. The columns give
   + &#9989; if input deviates from the majority. Majority is a user-defined quantile threshold that can be changed in *Settings*.
   + &#10060; if input fits the general pattern.
 - __Class__: Name of the relationship. This is either a pedigree, or some other measurement of relatedness. See below for a list of included class levels. 
-- __C__: Confidence score of the relationship. The confidence square quantifies the model's belief in each class given the input data. It is computed as a likelihood under the simplification that all features are conditionally independent, and should not be interpreted as a true probability estimate of the class. It can however be used as a coarse estimate of how likely each class is. This is for instance useful for comparing classes. The confidence score is either normalized or unnormalized, controlled with the `Normalize` button:
+- __Conf__: Confidence score of the relationship. The confidence square quantifies the model's belief in each class given the input data. It is computed as a likelihood under the simplification that all features are conditionally independent, and should not be interpreted as a true probability estimate of the class. It can however be used as a coarse estimate of how likely each class is. This is for instance useful for comparing classes. The confidence score is either normalized or unnormalized, controlled with the `Normalize` button:
   + Normalized: Scores normalized to sum to 1 over all classes.
   + Unnormalized: Raw likelihood estimates, on natural logarithmic scale. 
 
