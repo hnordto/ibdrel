@@ -2,7 +2,7 @@
 output: html_fragment
 ---
 
-**Likelihood table**
+**Relatedness table**
 
 Displays the pairwise relationship predictions for the inputted IBD sharing.
 

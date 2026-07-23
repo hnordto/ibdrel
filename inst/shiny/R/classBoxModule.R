@@ -193,11 +193,11 @@ classBoxServer = function(id, data) {
     output$pedPlot <- renderPlot({
 
       if (is.null(data[["selectedClass"]])) {
-        validate(need(FALSE, "Please select a class from the likelihood table."))
+        validate(need(FALSE, "Please select a class from the relatedness table."))
       }
 
       if (length(peds()) < current_index()) {
-        validate(need(FALSE, "Please select a class from the likelihood table."))
+        validate(need(FALSE, "Please select a class from the relatedness table."))
       }
 
       pedPlot(peds()[[current_index()]])
