@@ -408,6 +408,7 @@ annotatePedigree = function(ped, ids = NULL) {
     ng = if (removal > 1) removal - 1 else 0
 
 
+
     switch(type,
            lineal = {
              annot = paste0("L",degree)
@@ -463,7 +464,6 @@ pedsMetadata = function(pedlist) {
   metadata$degree = sapply(pedlist, pedDegree)
   metadata$type = sapply(pedlist, pedType)
 
-
   metadata$kappa0 = sapply(pedlist, pedKappa, 1)
   metadata$kappa1 = sapply(pedlist, pedKappa, 2)
   metadata$kappa2 = sapply(pedlist, pedKappa, 3)
@@ -476,6 +476,7 @@ pedsMetadata = function(pedlist) {
 
   metadata = merge(metadata, donnelly.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
+
 
   return(metadata)
 }
@@ -637,99 +638,127 @@ classTranslator <- function(class, resolution) {
   dictionary <- list("m" = "maternal",
                      "p" = "paternal")
 
+  if (is.na(class)) {
+    class = "distant"
+  }
+
   if (resolution == "eqclass.detailed" || resolution == "eqclass") {
-    # Split on sex path
 
-    class.split.rel <- strsplit(class, "-")[[1]][1]
-    class.split.sex <- strsplit(class, "-")[[1]][2]
-
-    # Split on half
-    rel.half <- strsplit(class.split.rel, "h")[[1]]
-
-    if (length(rel.half) > 1) {
-      rel <- rel.half[2]
-      half.write = "Half "
+    if (class == "distant") {
+      rel.write = "Distant"
     } else {
-      rel <- rel.half[1]
-      half.write = ""
-    }
+      # Split on sex path
 
-    rel.split <- strsplit(rel, "")[[1]]
+      class.split.rel <- strsplit(class, "-")[[1]][1]
+      class.split.sex <- strsplit(class, "-")[[1]][2]
 
-    # Check rel type. If first is numeric (valid), reltype is cousin
-    if (is_number(rel.split[1])) {
-      #cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
-      cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
-      rem <- rel.split[3]
-      #rem <- numtimes(as.numeric(rel.split[3]))
+      # Split on half
+      rel.half <- strsplit(class.split.rel, "h")[[1]]
 
-      if (rem == 0) {
-        rel.write <- paste0(half.write, cousDeg, " cousins")
-
+      if (length(rel.half) > 1) {
+        rel <- rel.half[2]
+        half.write = "Half "
       } else {
-        rel.write <- paste0(half.write, cousDeg, " cousins ", rem, "R")
+        rel <- rel.half[1]
+        half.write = ""
       }
 
+      rel.split <- strsplit(rel, "")[[1]]
 
-    } else if (rel.split[1] == "G" || rel.split[1] == "A") {
+      # Check rel type. If first is numeric (valid), reltype is cousin
+      if (is_number(rel.split[1])) {
+        #cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
+        cousDeg <- scales::ordinal(as.numeric(rel.split[1]))
+        rem <- rel.split[3]
+        #rem <- numtimes(as.numeric(rel.split[3]))
 
-      if (grepl("\\(\\d+\\)", rel)) {
-        rem <- gsub(".*\\((\\d+)\\).*", "\\1", rel)
-      } else {
-        rem <- NA
-      }
+        if (rem == 0) {
+          rel.write <- paste0(half.write, cousDeg, " cousins")
 
-      if (!is.na(rem)) {
-        if(rem > 2) {
-          rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
         } else {
-          rel.write <- paste0(half.write, "G avuncular")
+          rel.write <- paste0(half.write, cousDeg, " cousins ", rem, "R")
         }
 
-      } else {
-        rel.write <- paste(half.write, "Avuncular")
+
+      } else if (rel.split[1] == "G" || rel.split[1] == "A") {
+
+        if (grepl("\\(\\d+\\)", rel)) {
+          rem <- gsub(".*\\((\\d+)\\).*", "\\1", rel)
+        } else {
+          rem <- NA
+        }
+
+        if (!is.na(rem)) {
+          if(rem > 2) {
+            rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
+          } else {
+            rel.write <- paste0(half.write, "G avuncular")
+          }
+
+        } else {
+          rel.write <- paste(half.write, "Avuncular")
+        }
+
+      } else if (rel.split[1] == "S") {
+
+        rel.write <- paste(half.write, "Sibling")
+
+      } else if (rel.split[1] == "L") {
+        linDeg <- as.integer(strsplit(rel, "L")[[1]][2])
+
+        if (linDeg > 3) {
+          rel.write <- paste0("G<sup>", linDeg-2, "</sup> grandparent")
+        } else if(linDeg == 3) {
+          rel.write <- paste0("G ", "grandparent")
+        } else if (linDeg == 2) {
+          rel.write <- paste0("Grandparent")
+        } else {
+          rel.write <- paste0("Parent")
+        }
       }
 
-    } else if (rel.split[1] == "S") {
-
-      rel.write <- paste(half.write, "Sibling")
-
-    } else if (rel.split[1] == "L") {
-      linDeg <- as.integer(strsplit(rel, "L")[[1]][2])
-
-      if (linDeg > 3) {
-        rel.write <- paste0("G<sup>", linDeg-2, "</sup> grandparent")
-      } else if(linDeg == 3) {
-        rel.write <- paste0("G ", "grandparent")
-      } else if (linDeg == 2) {
-        rel.write <- paste0("Grandparent")
+      if (!(is.na(class.split.sex))) {
+        sexpath.split = strsplit(class.split.sex, "")[[1]]
+        sexpath.expanded = dictionary[sexpath.split]
+        sexpath.write = paste0("(",paste(sexpath.split, collapse = "-"),")")
       } else {
-        rel.write <- paste0("Parent")
+        sexpath.write = ""
       }
+
+      rel.write = paste(rel.write, sexpath.write)
     }
 
-    if (!(is.na(class.split.sex))) {
-      sexpath.split = strsplit(class.split.sex, "")[[1]]
-      sexpath.expanded = dictionary[sexpath.split]
-      sexpath.write = paste0("(",paste(sexpath.split, collapse = "-"),")")
-    } else {
-      sexpath.write = ""
-    }
-
-    rel.write = paste(rel.write, sexpath.write)
 
   } else if (resolution == "kappa") {
-    kappa.split <- as.numeric(strsplit(class, "-")[[1]])
-    kappa0 = as.character(MASS::fractions(kappa.split[1]))
-    kappa1 = as.character(MASS::fractions(kappa.split[2]))
-    kappa2 = as.character(MASS::fractions(kappa.split[3]))
 
-    rel.write <- paste0("(", kappa0, " , ", kappa1, " , ", kappa2, ")")
+    if (class == "distant") {
+      rel.write = "Distant"
+    } else {
+      kappa.split <- as.numeric(strsplit(class, "-")[[1]])
+      kappa0 = as.character(MASS::fractions(kappa.split[1]))
+      kappa1 = as.character(MASS::fractions(kappa.split[2]))
+      kappa2 = as.character(MASS::fractions(kappa.split[3]))
+
+      rel.write <- paste0("(", kappa0, " , ", kappa1, " , ", kappa2, ")")
+    }
 
   } else if (resolution == "kinship") {
-    rel.write <- as.character(MASS::fractions(as.numeric(class)))
+
+    if (class == "distant") {
+      rel.write = as.character(paste0("<",MASS::fractions(as.numeric(0.0039062500))))
+    } else {
+      rel.write <- as.character(MASS::fractions(as.numeric(class)))
+    }
+
+
   } else if (resolution == "degree") {
-    rel.write <- class
+
+    if (class == "distant") {
+      rel.write <- ">7"
+    } else {
+      rel.write <- class
+    }
+
   } else {
     stop("Unknown classification resolution")
   }
@@ -740,7 +769,16 @@ classTranslator <- function(class, resolution) {
 
 #'
 #'@export
-lookupClass = function(class, to, from, metadata) {
+lookupClass = function(class, to, from, metadata, conditionDistant) {
+
+  if (isFALSE(conditionDistant)) {
+    metadata[metadata$degree > 7, to] <- "distant"
+  }
+
+  if(isTRUE(conditionDistant)) {
+    metadata[metadata$degree <= 7, to] <- "close"
+  }
+
   lookup = metadata |>
     dplyr::select(from, !!rlang::sym(to)) |>
     tibble::deframe()

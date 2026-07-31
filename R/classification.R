@@ -45,7 +45,7 @@ preparePdfs = function(lengthData, featureSel = c("count", "total"), cutoff = 0,
 
   pdfs <- list(
     count = if ("count" %in% featureSel) lengths(lengthData) |>
-      density(from = 0, bw = "nrd0", kernel = "rectangular") |> approxfun(rule = 2) else NULL,
+      density(from = 0, bw = "nrd0") |> approxfun(rule = 2) else NULL,
     total = if ("total" %in% featureSel) vapply(lengthData, sum, FUN.VALUE = 1) |>
       density(from = 0, bw = bw) |> approxfun(rule = 2) else NULL,
     length = if ("length" %in% featureSel) unlist(lengthData, use.names = FALSE) |>
@@ -239,15 +239,28 @@ distance <- function(obs, features, cutoff, featureSel, threshold, isFeatures) {
 #'@export
 trueClasses <- function(testsegments,
                         metadata,
-                        agg.level) {
+                        agg.level,
+                        conditionDistant = FALSE) {
 
   truth <- c()
 
   for (i in 1:length(testsegments)) {
+
     true = metadata |>
       dplyr::filter(rel == names(testsegments)[i]) |>
       dplyr::select(agg.level) |>
       as.character()
+
+    if (isFALSE(conditionDistant)) {
+      degree = metadata |>
+        dplyr::filter(rel == names(testsegments)[i]) |>
+        dplyr::select(degree) |>
+        as.integer()
+      if (degree > 7) {
+        true = "distant"
+      }
+    }
+
 
     truth <- c(truth, rep(true, length(testsegments[[i]])))
   }

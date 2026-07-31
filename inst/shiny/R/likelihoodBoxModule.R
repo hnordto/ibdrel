@@ -54,7 +54,8 @@ likelihoodBoxUI = function(id) {
     footer = div(
       checkboxGroupInput(NS(id, "likelihoodTableSettings"), "",
                          c("Normalize" = "normalize",
-                           "Filter" = "filter"),
+                           "Filter" = "filter",
+                           "Condition on distant" = "distant"),
                          selected = "normalize",
                          inline = TRUE)
     )
@@ -94,6 +95,7 @@ likelihoodBoxServer = function(id, data) {
     observe({
       data[["normalize"]] = "normalize" %in% input$likelihoodTableSettings
       data[["filter"]] = "filter" %in% input$likelihoodTableSettings
+      data[["distant"]] = "distant" %in% input$likelihoodTableSettings
     })
 
     # Help

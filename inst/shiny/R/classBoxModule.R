@@ -196,6 +196,7 @@ classBoxServer = function(id, data) {
         validate(need(FALSE, "Please select a class from the relatedness table."))
       }
 
+
       if (length(peds()) < current_index()) {
         validate(need(FALSE, "Please select a class from the relatedness table."))
       }

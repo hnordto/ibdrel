@@ -37,12 +37,13 @@
 #' @export
 fitModel <- function(data = NULL,
                      features = "default",
-                     cutoff = 7) {
+                     cutoff = 7,
+                     conditionDistant = FALSE) {
   if (is.null(data)) {
-    data = loadData()
+    data = loadData(conditionDistant = conditionDistant)
   }
 
-  if (features == "default") {
+  if (all(features == "default")) {
     pdfs = lapply(names(data), function(nm) {
       x <- data[[nm]]
       lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]],
@@ -74,7 +75,7 @@ fitModel <- function(data = NULL,
 }
 
 featureSelection.default = list("eqclass.detailed" = c("count", "length"),
-                                "eqclass" = c("count", "length"),
+                                "eqclass" = c("count", "total"),
                                 "kappa" = c("count", "total"),
                                 "kinship" = c("count", "total"),
                                 "degree" = c("count", "total"))

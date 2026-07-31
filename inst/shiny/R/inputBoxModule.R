@@ -213,7 +213,7 @@ inputBoxServer = function(id, data) {
       data[["resolutions"]] <- resolutions
 
       data[["segments"]] = sapply(resolutions, function(x) {
-        aggregateSegments(segmentData, metadata, x)
+        aggregateSegments(segmentData, metadata, x, conditionDistant = data[["distant"]])
       }, simplify = FALSE)
 
       data[["metadata"]] = metadata

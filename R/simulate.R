@@ -159,9 +159,10 @@ lengthIBD = function(simlist,
 
 #'
 #'@export
-aggregateSegments = function(segments, metadata, metadata.agg.column) {
+aggregateSegments = function(segments, metadata, metadata.agg.column, conditionDistant = F) {
 
-  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata)
+
+  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, conditionDistant)
 
   agg.ids = lookup[names(segments)]
 
@@ -171,6 +172,11 @@ aggregateSegments = function(segments, metadata, metadata.agg.column) {
     dplyr::summarise(segments = list(unlist(segment, recursive = FALSE)),
                      .groups = "drop") |>
     tibble::deframe()
+
+  if (isTRUE(conditionDistant)) {
+    aggregatedSegments["close"] <- NULL
+  }
+
 
   return (aggregatedSegments)
 }
