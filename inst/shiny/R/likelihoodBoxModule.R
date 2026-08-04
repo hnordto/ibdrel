@@ -49,15 +49,29 @@ likelihoodBoxUI = function(id) {
 
     div(w_resolution(id)),
 
-    DT::DTOutput(NS(id, "resTable"),
-                 width = "fit-content"),
+    div(class="res-table",
+        DT::DTOutput(NS(id, "resTable"),
+                 width = "fit-content")),
     footer = div(
       checkboxGroupInput(NS(id, "likelihoodTableSettings"), "",
                          c("Normalize" = "normalize",
-                           "Filter" = "filter",
-                           "Condition on distant" = "distant"),
+                           "Filter" = "filter"),
                          selected = "normalize",
-                         inline = TRUE)
+                         inline = TRUE),
+      div(class = "control-label",
+        tags$label("Distant", class = "control-label"),
+        span("Expand"),
+        prettySwitch(
+          NS(id, "collapseDistant"),
+          label = NULL,
+          value = TRUE,
+          status = "success",
+          fill = TRUE,
+          slim = TRUE,
+          inline = FALSE
+        ),
+        span("Collapse")
+      )
     )
   )
 }
@@ -95,7 +109,7 @@ likelihoodBoxServer = function(id, data) {
     observe({
       data[["normalize"]] = "normalize" %in% input$likelihoodTableSettings
       data[["filter"]] = "filter" %in% input$likelihoodTableSettings
-      data[["distant"]] = "distant" %in% input$likelihoodTableSettings
+      data[["distant"]] = input$collapseDistant
     })
 
     # Help
@@ -151,7 +165,9 @@ computeLikelihoodTable <- function(data, resolution) {
     metadata.class <- metadata[metadata$class == x,]$class
     ibdrel::classTranslator(x, resolution)
   })
+  classlabels = gsub("\\s*\\([^)]*\\)", "", classlabels)
   classlabels = firstup(classlabels) # First letter to uppercase
+
 
   classlabels <- setNames(classlabels, names(likelihoods))
 
@@ -169,6 +185,7 @@ computeLikelihoodTable <- function(data, resolution) {
   kappa = as.character(paste0("(",kappa0, ",", kappa1, ",", kappa2, ")"))
   kinship = as.character(MASS::fractions(metadata.subset$kinship))
   degree = as.character(metadata.subset$degree)
+  sexconfig = as.character(metadata.subset$sexconfig)
 
   # Base dataframe, independent of resolution
   df <- data.frame(Rank = seq_along(likelihoods),
@@ -177,13 +194,14 @@ computeLikelihoodTable <- function(data, resolution) {
                    Conf = round(likelihoods, 2))
 
   if (resolution == "eqclass.detailed") {
-    df <- cbind(df,
-                Rel = eqclass,
+    df <- cbind(df[,1:3, drop = FALSE],
+                Sex = sexconfig,
+                df[,4,drop=FALSE],
                 Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[6:7] <- c("\u03BA", "\u03C6")
-    class_rename = "Sex"
+    colnames(df)[7:8] <- c("\u03BA", "\u03C6")
+    class_rename = "Rel"
   }
 
   if (resolution == "eqclass") {
@@ -255,7 +273,7 @@ likelihoodTable <- function(df) {
       scrollCollapse = TRUE,
       paging = FALSE,
       columnDefs = list(
-        list(className = "bold-col", targets = 3),
+        list(className = "bold-col", targets = ifelse(ncol(df) == 8, 4, 3)),
         list(className = "dt-center", targets = "_all")
       )
     ),

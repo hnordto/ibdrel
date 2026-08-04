@@ -96,3 +96,21 @@ td.bold-col {
 .bttn-jelly.bttn-danger {
   background-color: #E35336;
 }
+
+.res-table {
+  overflow-x: auto;
+}
+
+.control-label {
+  display: flex;
+  gap: 10px;
+}
+
+.control-label .pretty-switch {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.shiny-input-container:not(.shiny-input-container-inline) {
+  width: 30px;
+}

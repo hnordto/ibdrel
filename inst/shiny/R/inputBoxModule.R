@@ -213,7 +213,7 @@ inputBoxServer = function(id, data) {
       data[["resolutions"]] <- resolutions
 
       data[["segments"]] = sapply(resolutions, function(x) {
-        aggregateSegments(segmentData, metadata, x, conditionDistant = data[["distant"]])
+        aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
       }, simplify = FALSE)
 
       data[["metadata"]] = metadata
@@ -402,8 +402,8 @@ inputBoxServer = function(id, data) {
 
       segs = ibdsim2::ibdsim(ped, ids = simids, N = 1,
                              verbose = FALSE) |>
-        ibdsim2::findPattern(pattern = list(carriers = simids)) |>
-        ibdsim2::segmentStats(returnAll = TRUE)
+        ibdsim2::findPattern(pattern = list(carriers = simids), unit = "cm") |>
+        ibdsim2::segmentStats(returnAll = TRUE, unit = "cm")
 
       lens = segs$allSegs |> round(digits = 4)
       segment_input(paste(lens, collapse ="\n"))

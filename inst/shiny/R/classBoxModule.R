@@ -53,7 +53,6 @@ classBoxUI = function(id) {
     collapsed = FALSE,
     status = "olive",
 
-    uiOutput(NS(id, "classSummary")),
     fluidRow(
       column(
         width = 6,
@@ -63,7 +62,8 @@ classBoxUI = function(id) {
       column(
         width = 6,
         plotOutput(NS(id,"jointDistPlot"))
-      )
+      ),
+      uiOutput(NS(id, "classSummary"))
     )
 
     #box(
