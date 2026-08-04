@@ -2,7 +2,7 @@
 #'@export
 loadData <- function(data = NULL,
                      levels = "all",
-                     conditionDistant = FALSE) {
+                     collapseDistant = TRUE) {
   if (length(levels) == 1 && levels == "all") {
     levels = RESOLUTIONS
   } else if (any(!(levels %in% RESOLUTIONS))) {
@@ -11,9 +11,9 @@ loadData <- function(data = NULL,
   }
 
   if(is.null(data)) {
-    dta = prepareData(ibdrel_unilineal, levels, conditionDistant)
+    dta = prepareData(ibdrel_unilineal, levels, collapseDistant)
   } else {
-    dta = prepareData(data, levels, conditionDistant)
+    dta = prepareData(data, levels, collapseDistant)
   }
 
   dta
@@ -21,13 +21,13 @@ loadData <- function(data = NULL,
 
 #'
 #'@export
-prepareData <- function(data, levels = "all", conditionDistant = F) {
+prepareData <- function(data, levels = "all", collapseDistant = TRUE) {
   segmentData = data$segments
   peds = data$peds
   metadata = pedsMetadata(peds)
 
   data.clean = sapply(RESOLUTIONS, function(x) {
-    aggregateSegments(segmentData, metadata, x, conditionDistant)
+    aggregateSegments(segmentData, metadata, x, collapseDistant)
   }, simplify = FALSE)
 
   data.clean

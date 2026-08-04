@@ -38,9 +38,9 @@
 fitModel <- function(data = NULL,
                      features = "default",
                      cutoff = 7,
-                     conditionDistant = FALSE) {
+                     collapseDistant = TRUE) {
   if (is.null(data)) {
-    data = loadData(conditionDistant = conditionDistant)
+    data = loadData(collapseDistant = collapseDistant)
   }
 
   if (all(features == "default")) {

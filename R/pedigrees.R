@@ -477,8 +477,14 @@ pedsMetadata = function(pedlist) {
   metadata = merge(metadata, donnelly.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
 
+  metadata$sexconfig <- sapply(metadata$eqclass.detailed, sexConfig)
+
 
   return(metadata)
+}
+
+sexConfig = function(eqclass.detailed) {
+  strsplit(eqclass.detailed, "-")[[1]][2]
 }
 
 pedCode = function(ped) {
@@ -769,14 +775,10 @@ classTranslator <- function(class, resolution) {
 
 #'
 #'@export
-lookupClass = function(class, to, from, metadata, conditionDistant) {
+lookupClass = function(class, to, from, metadata, collapseDistant) {
 
-  if (isFALSE(conditionDistant)) {
+  if (isTRUE(collapseDistant)) {
     metadata[metadata$degree > 7, to] <- "distant"
-  }
-
-  if(isTRUE(conditionDistant)) {
-    metadata[metadata$degree <= 7, to] <- "close"
   }
 
   lookup = metadata |>
