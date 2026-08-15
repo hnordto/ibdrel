@@ -695,7 +695,7 @@ classTranslator <- function(class, resolution) {
         }
 
         if (!is.na(rem)) {
-          if(rem > 2) {
+          if(rem > 1) {
             rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
           } else {
             rel.write <- paste0(half.write, "G avuncular")

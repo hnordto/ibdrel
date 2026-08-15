@@ -47,7 +47,8 @@ nextPed = function(id) {
 classBoxUI = function(id) {
 
   bs4Card(
-    title = "Plot",
+    title = div(style = "display: flex; gap: 15px;", "Plot",
+                uiOutput(NS(id, "pedControls"))),
     width = NULL,
     collapse = TRUE,
     collapsed = FALSE,
@@ -56,7 +57,6 @@ classBoxUI = function(id) {
     fluidRow(
       column(
         width = 6,
-        uiOutput(NS(id, "pedControls")),
         plotOutput(NS(id, "pedPlot"))
       ),
       column(

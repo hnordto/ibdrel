@@ -165,8 +165,8 @@ computeLikelihoodTable <- function(data, resolution) {
     metadata.class <- metadata[metadata$class == x,]$class
     ibdrel::classTranslator(x, resolution)
   })
-  classlabels = gsub("\\s*\\([^)]*\\)", "", classlabels)
-  classlabels = firstup(classlabels) # First letter to uppercase
+  classlabels = if (!(resolution == "kappa")) { gsub("\\s*\\([^)]*\\)", "", classlabels) } else {classlabels}
+  classlabels = if (!(resolution == "kappa")) {firstup(classlabels)} else {classlabels} # First letter to uppercase
 
 
   classlabels <- setNames(classlabels, names(likelihoods))
@@ -182,16 +182,20 @@ computeLikelihoodTable <- function(data, resolution) {
   kappa1 = as.character(MASS::fractions(metadata.subset$kappa1))
   kappa2 = as.character(MASS::fractions(metadata.subset$kappa2))
 
-  kappa = as.character(paste0("(",kappa0, ",", kappa1, ",", kappa2, ")"))
+  kappa =  as.character(paste0("(",kappa0, ",", kappa1, ",", kappa2, ")"))
+  kappa[kappa == "(NA,NA,NA)"] <- ""
   kinship = as.character(MASS::fractions(metadata.subset$kinship))
   degree = as.character(metadata.subset$degree)
   sexconfig = as.character(metadata.subset$sexconfig)
+
+  kinship[is.na(kinship)] <- "<1/256"
+  degree[is.na(degree)] <- ">7"
 
   # Base dataframe, independent of resolution
   df <- data.frame(Rank = seq_along(likelihoods),
                    Outlier = isoutlier,
                    Class = names(likelihoods),
-                   Conf = round(likelihoods, 2))
+                   Posterior = round(likelihoods, 2))
 
   if (resolution == "eqclass.detailed") {
     df <- cbind(df[,1:3, drop = FALSE],
@@ -200,7 +204,7 @@ computeLikelihoodTable <- function(data, resolution) {
                 Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[7:8] <- c("\u03BA", "\u03C6")
+    colnames(df)[6:7] <- c("\u03BA", "\u03C6")
     class_rename = "Rel"
   }
 
@@ -209,7 +213,7 @@ computeLikelihoodTable <- function(data, resolution) {
                 Kappa = kappa,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[6:7] <- c("\u03BA", "\u03C6")
+    colnames(df)[5:6] <- c("\u03BA", "\u03C6")
     class_rename = "Rel"
   }
 
@@ -217,7 +221,7 @@ computeLikelihoodTable <- function(data, resolution) {
     df <- cbind(df,
                 Kinship = kinship,
                 Degree = degree)
-    colnames(df)[6] <- c("\u03C6")
+    colnames(df)[5] <- c("\u03C6")
     class_rename = "\u03BA"
   }
 
@@ -241,6 +245,10 @@ computeLikelihoodTable <- function(data, resolution) {
   df$Class <- classlabels[df$Class]
   colnames(df)[1:2] <- c(" ", " ")
   colnames(df)[3] <- class_rename
+
+  if (!normalize) {
+    colnames(df)[colnames(df)=="Posterior"] <- "Lik"
+  }
 
   #colnames(df)[colnames(df) == "Rank"] <- ""
   #colnames(df)[colnames(df) == "Outlier"] <- ""
@@ -266,7 +274,7 @@ likelihoodTable <- function(df) {
     selection = "single",
     options = list(
       dom = "t",
-      autoWidth = FALSE,
+      autoWidth = TRUE,
       ordering = FALSE,
       scrollX = TRUE,
       scrollY = "500px",
