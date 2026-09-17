@@ -48,11 +48,11 @@ metadata = ibdrel::pedsMetadata(peds)
 supported.features <- c("count", "total", "median", "longest", "shortest")
 input.types <- c("Segments" = "segments", "Summaries (not yet supported!)" = "summaries")
 
-featureSelection.default = list("eqclass.detailed" = c("count", "length"),
-                                "eqclass" = c("count", "length"),
-                                "kappa" = c("count", "total"),
-                                "kinship" = c("count", "total"),
-                                "degree" = c("count", "total"))
+featureSelection.default = list("eqclass.detailed" = c("count", "total", "length"),
+                                "eqclass" = c("count", "total", "length"),
+                                "kappa" = c("count", "total", "length"),
+                                "kinship" = c("count", "total", "length"),
+                                "degree" = c("count", "total", "length"))
 
 inputBoxUI <- function(id) {
 

@@ -74,8 +74,8 @@ fitModel <- function(data = NULL,
 
 }
 
-featureSelection.default = list("eqclass.detailed" = c("count", "length"),
-                                "eqclass" = c("count", "total"),
-                                "kappa" = c("count", "total"),
-                                "kinship" = c("count", "total"),
-                                "degree" = c("count", "total"))
+featureSelection.default = list("eqclass.detailed" = c("count", "length", "total"),
+                                "eqclass" = c("count", "length", "total"),
+                                "kappa" = c("count", "length", "total"),
+                                "kinship" = c("count", "length", "total"),
+                                "degree" = c("count", "length", "total"))
