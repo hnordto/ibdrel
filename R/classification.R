@@ -240,7 +240,7 @@ distance <- function(obs, features, cutoff, featureSel, threshold, isFeatures) {
 trueClasses <- function(testsegments,
                         metadata,
                         agg.level,
-                        conditionDistant = FALSE) {
+                        collapseDistant = TRUE) {
 
   truth <- c()
 
@@ -251,7 +251,7 @@ trueClasses <- function(testsegments,
       dplyr::select(agg.level) |>
       as.character()
 
-    if (isFALSE(conditionDistant)) {
+    if (isTRUE(collapseDistant)) {
       degree = metadata |>
         dplyr::filter(rel == names(testsegments)[i]) |>
         dplyr::select(degree) |>
