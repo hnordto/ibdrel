@@ -30,6 +30,10 @@ peds <- constructPedigrees(rels)
 annotation = sapply(peds, annotatePedigree)
 names(peds) <- annotation
 
+# Remove siblings
+sib.idx <- which(names(peds) == "S")
+peds = peds[-sib.idx]
+annotation = annotation[-sib.idx]
 
 metadata = pedsMetadata(peds)
 
