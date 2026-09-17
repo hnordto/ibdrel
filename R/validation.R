@@ -59,3 +59,55 @@ sensitivity <- function(pred, true, k=1) {
   do.call(rbind, res)
 
 }
+
+ppv <- function(pred, true) {
+  classes <- colnames(pred)
+  true <- factor(true, levels = classes)
+  true_chr <- as.character(true)
+
+
+}
+
+model.logloss <- function(segments.test, features, cutoff) {
+  metadata = pedsMetadata(ibdrel_unilineal$peds)
+
+  true.eqdetailed <- factor(trueClasses(segments.test, metadata, "eqclass.detailed"))
+  true.eq <- factor(trueClasses(segments.test, metadata, "eqclass"))
+  true.deg <- factor(trueClasses(segments.test, metadata, "degree"))
+
+  res <- data.frame(features = character(),
+                    logloss.eqdetailed = numeric(),
+                    logloss.eq = numeric(),
+                    logloss.eeg = numeric())
+
+  for (i in 1:length(features)) {
+    feature <- features[[i]]
+
+    model = fitModel(features = feature, cutoff = cutoff)
+
+    pred = predict(segments.test, model, sort = FALSE)
+
+    pred.eqdetailed <- pred$eqclass.detailed
+    pred.eq <- pred$eqclass
+    pred.deg <-pred$deg
+
+    true.eqdetailed <- factor(true.eqdetailed, levels = colnames(pred.eqdetailed))
+    true.eq <- factor(true.eq, levels = colnames(pred.eq))
+    true.deg <- factor(true.deg, levels = colnames(pred.deg))
+
+    w.eqdetailed <- 1 / table(true.eqdetailed)[as.character(true.eqdetailed)]
+    w.eq <- 1 / table(true.eq)[as.character(true.eq)]
+    w.deg <- 1 / table(true.deg)[as.character(true.deg)]
+
+    logloss.eqdetailed <- SLmetrics::weighted.logloss(actual = true.eqdetailed, response = pred.eqdetailed, w = w.eqdetailed)
+    logloss.eq <- SLmetrics::weighted.logloss(actual = true.eq, response = pred.eq, w = w.eq)
+    logloss.deg <- SLmetrics::weighted.logloss(actual = true.deg, response = pred.deg, w = w.deg)
+
+    res <- rbind(res, data.frame(features = toString(feature),
+                                 logloss.eqdetailed = logloss.eqdetailed,
+                                 logloss.eq = logloss.eq,
+                                 logloss.deg = logloss.deg))
+  }
+
+  return (res)
+}
