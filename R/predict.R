@@ -26,8 +26,37 @@ predict <- function(observed, model,
     })
   }
 
+  pred <- lapply(RESOLUTIONS, function(x) {
+    aggregateProbs(pred, pedsMetadata(model$peds), x, TRUE)
+  })
+  names(pred) <- RESOLUTIONS
+
 
   return (pred)
+}
+
+aggregateProbs <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
+  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, collapseDistant)
+
+  if (isTRUE(collapseDistant)) {
+    lookup["distant"] = "distant"
+  }
+
+  agg.ids = lookup[colnames(pred$eqclass.detailed)]
+
+  t(rowsum(t(pred$eqclass.detailed), group = agg.ids))
+}
+
+aggregateProbs2 <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
+  lookup = lookupClass(NULL, metadata.agg.column, "eqclass.detailed", metadata, collapseDistant)
+
+  group <- factor(lookup[colnames(pred$eqclass.detailed)], levels = unique(lookup[colnames(pred$eqclass.detailed)]))
+
+  M <- matrix(0, nrow = ncol(pred$eqclass.detailed), ncol = nlevels(group), dimnames = list(colnames(pred$eqclass.detailed), levels(group)))
+
+  M[cbind(seq_along(group), as.integer(group))] <- 1
+
+  pred$eqclass.detailed %*% M
 }
 
 # Helper function to retrieve each observation when multiple are inputted

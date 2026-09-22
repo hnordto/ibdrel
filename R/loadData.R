@@ -26,7 +26,9 @@ prepareData <- function(data, levels = "all", collapseDistant = TRUE) {
   peds = data$peds
   metadata = pedsMetadata(peds)
 
-  data.clean = sapply(RESOLUTIONS, function(x) {
+  LEVELS = c("eqclass.detailed")
+
+  data.clean = sapply(LEVELS, function(x) {
     aggregateSegments(segmentData, metadata, x, collapseDistant)
   }, simplify = FALSE)
 

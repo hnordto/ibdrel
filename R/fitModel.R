@@ -41,9 +41,12 @@ fitModel <- function(data = NULL,
                      collapseDistant = TRUE) {
   if (is.null(data)) {
     data = loadData(collapseDistant = collapseDistant)
+  } else {
+    data = loadData(data)
   }
 
   if (all(features == "default")) {
+
     pdfs = lapply(names(data), function(nm) {
       x <- data[[nm]]
       lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]],
@@ -64,10 +67,13 @@ fitModel <- function(data = NULL,
 
   }
 
+  peds = ibdrel_unilineal$peds[names(data$eqclass.detailed)]
+
   model = list(
     pdfs = pdfs,
     cutoff = cutoff,
-    features = features
+    features = features,
+    peds = peds
   )
 
   return (model)
