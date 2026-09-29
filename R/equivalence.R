@@ -1,6 +1,6 @@
 #'
 #' @export
-anchor <- function(ped, ids = ibdrel:::identifyLeaves(ped)) {
+anchor <- function(ped, ids = ibdrel:::specifyUnilineal(ped)) {
   # Only support relationships connected through one ancestral path
 
 
@@ -25,7 +25,7 @@ anchor <- function(ped, ids = ibdrel:::identifyLeaves(ped)) {
 
 #'
 #' @export
-pedVariants <- function(ped, ids = identifyLeaves(ped), onlyExtremes = FALSE) {
+pedVariants <- function(ped, ids = specifyUnilineal(ped), onlyExtremes = FALSE) {
 
   verb <- verbalisr::verbalise(ped, ids)
 

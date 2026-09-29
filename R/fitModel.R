@@ -37,37 +37,31 @@
 #' @export
 fitModel <- function(data = NULL,
                      features = "default",
-                     cutoff = 7,
-                     collapseDistant = TRUE) {
+                     cutoff = 7) {
   if (is.null(data)) {
-    data = loadData(collapseDistant = collapseDistant)
+    data = loadData()
   } else {
     data = loadData(data)
   }
 
   if (all(features == "default")) {
 
-    pdfs = lapply(names(data), function(nm) {
-      x <- data[[nm]]
-      lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]],
-             cutoff = cutoff)
-    })
+    pdfs = lapply(data, preparePdfs, featureSel = DEFAULT.FEATURES, cutoff = cutoff)
     names(pdfs) <- names(data)
+
   } else {
     if (any(!(features %in% VALID.FEATURES))) {
       stop("Invalid feature(s). Must be one or multiple of ",
            paste(VALID.FEATURES, collapse = ", "))
     }
 
-    pdfs = lapply(data, function(x) {
-      lapply(x, preparePdfs,
-             featureSel = features,
-             cutoff = cutoff)
-    })
-
+    pdfs = lapply(data, preparePdfs, featureSel = features, cutoff = cutoff)
   }
 
-  peds = ibdrel_unilineal$peds[names(data$eqclass.detailed)]
+  # TEMP: WITH NAMES UNTIL DATA RAW IS UPDATED
+  peds = ibdrel_unilineal$peds
+  names(peds) = sapply(peds, annotatePedigree)
+  peds = peds[names(data)]
 
   model = list(
     pdfs = pdfs,
@@ -76,12 +70,15 @@ fitModel <- function(data = NULL,
     peds = peds
   )
 
+  class(model) <- "ibdrelModel"
+
   return (model)
 
 }
 
-featureSelection.default = list("eqclass.detailed" = c("count", "length", "total"),
-                                "eqclass" = c("count", "length", "total"),
-                                "kappa" = c("count", "length", "total"),
-                                "kinship" = c("count", "length", "total"),
-                                "degree" = c("count", "length", "total"))
+print.ibdrelModel <- function(x, ...) {
+  cat("<ibdrelModel>\n")
+  cat("Number of probability density functions (sex-aware pedigree relationships):", length(x$pdfs), "\n")
+  cat("Features:", x$features, " (default: ", DEFAULT.FEATURES, ")", "\n")
+  cat("Cutoff (cM):", x$cutoff, "\n")
+}

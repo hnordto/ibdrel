@@ -1,23 +1,25 @@
 #'
-#'@export
-predict <- function(observed, model,
-                    normalize = TRUE, sort = TRUE) {
+#' @export
+predict.ibdrelModel <- function(object, newdata,
+                    normalize = TRUE, sort = TRUE, collapseDistant = TRUE) {
 
-  pdfs = model$pdfs
+  pdfs = object$pdfs
 
-  obs = get_inner_element(observed)
+  allobs = get_inner_element(newdata)
 
   if (length(obs) > 1 && isTRUE(sort)) {
     stop("Cannot sort multiple observations, as ranks may differ. Set sort = FALSE.")
   }
 
-  pred = lapply(pdfs, function(pdf) {
-    res_lst = lapply(obs, function(obs_vec) {
-      classify(obs_vec, pdf, cutoff = model$cutoff, sort = sort)
-    })
-
-    do.call(rbind, res_lst)
+  pred = lapply(allobs, function(obs) {
+    classify(obs, pdfuns = pdfs, cutoff = object$cutoff, sort = sort)
   })
+  pred = do.call(rbind, pred)
+
+  pred <- lapply(RESOLUTIONS, function(x) {
+    aggregateProbs(pred, pedsMetadata(model$peds), x, collapseDistant)
+  })
+  names(pred) <- RESOLUTIONS
 
 
   if (normalize) {
@@ -25,11 +27,6 @@ predict <- function(observed, model,
       t(apply(mat, 1, normalizeLikelihoods))
     })
   }
-
-  pred <- lapply(RESOLUTIONS, function(x) {
-    aggregateProbs(pred, pedsMetadata(model$peds), x, TRUE)
-  })
-  names(pred) <- RESOLUTIONS
 
 
   return (pred)
@@ -42,21 +39,9 @@ aggregateProbs <- function(pred, metadata, metadata.agg.column, collapseDistant 
     lookup["distant"] = "distant"
   }
 
-  agg.ids = lookup[colnames(pred$eqclass.detailed)]
+  agg.ids = lookup[colnames(pred)]
 
-  t(rowsum(t(pred$eqclass.detailed), group = agg.ids))
-}
-
-aggregateProbs2 <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
-  lookup = lookupClass(NULL, metadata.agg.column, "eqclass.detailed", metadata, collapseDistant)
-
-  group <- factor(lookup[colnames(pred$eqclass.detailed)], levels = unique(lookup[colnames(pred$eqclass.detailed)]))
-
-  M <- matrix(0, nrow = ncol(pred$eqclass.detailed), ncol = nlevels(group), dimnames = list(colnames(pred$eqclass.detailed), levels(group)))
-
-  M[cbind(seq_along(group), as.integer(group))] <- 1
-
-  pred$eqclass.detailed %*% M
+  t(rowsum(t(pred), group = agg.ids))
 }
 
 # Helper function to retrieve each observation when multiple are inputted

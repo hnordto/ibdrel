@@ -1,19 +1,11 @@
 #'
 #'@export
-loadData <- function(data = NULL,
-                     levels = "all",
-                     collapseDistant = TRUE) {
-  if (length(levels) == 1 && levels == "all") {
-    levels = RESOLUTIONS
-  } else if (any(!(levels %in% RESOLUTIONS))) {
-    stop("Invalid level. Must be one or multiple of ",
-         paste(RESOLUTIONS, collapse = " , "))
-  }
+loadData <- function(data = NULL) {
 
   if(is.null(data)) {
-    dta = prepareData(ibdrel_unilineal, levels, collapseDistant)
+    dta = prepareData(ibdrel_unilineal)
   } else {
-    dta = prepareData(data, levels, collapseDistant)
+    dta = prepareData(data)
   }
 
   dta
@@ -21,16 +13,12 @@ loadData <- function(data = NULL,
 
 #'
 #'@export
-prepareData <- function(data, levels = "all", collapseDistant = TRUE) {
+prepareData <- function(data) {
   segmentData = data$segments
   peds = data$peds
   metadata = pedsMetadata(peds)
 
-  LEVELS = c("eqclass.detailed")
-
-  data.clean = sapply(LEVELS, function(x) {
-    aggregateSegments(segmentData, metadata, x, collapseDistant)
-  }, simplify = FALSE)
+  data.clean = aggregateSegments(segmentData, metadata, "sex.eqclass")
 
   data.clean
 }

@@ -134,9 +134,9 @@ reliability <- function(pred, true, nbins = 10) {
 model.logloss <- function(segments.test, features, cutoff) {
   metadata = pedsMetadata(ibdrel_unilineal$peds)
 
-  true.eqdetailed <- factor(trueClasses(segments.test, metadata, "eqclass.detailed"))
-  true.eq <- factor(trueClasses(segments.test, metadata, "eqclass"))
-  true.deg <- factor(trueClasses(segments.test, metadata, "degree"))
+  true.eqdetailed <- factor(trueClasses(segments.test, metadata, "sex.eqclass"))
+  true.eq <- factor(trueClasses(segments.test, metadata, "rel.eqclass"))
+  true.deg <- factor(trueClasses(segments.test, metadata, "deg"))
 
   res <- data.frame(features = character(),
                     logloss.eqdetailed = numeric(),
@@ -150,9 +150,9 @@ model.logloss <- function(segments.test, features, cutoff) {
 
     pred = predict(segments.test, model, sort = FALSE)
 
-    pred.eqdetailed <- pred$eqclass.detailed
-    pred.eq <- pred$eqclass
-    pred.deg <-pred$deg
+    pred.eqdetailed <- pred$sex.eqclass
+    pred.eq <- pred$rel.eqclass
+    pred.deg <- pred$deg
 
     true.eqdetailed <- factor(true.eqdetailed, levels = colnames(pred.eqdetailed))
     true.eq <- factor(true.eq, levels = colnames(pred.eq))
@@ -296,11 +296,11 @@ smith.readResult <- function(path) {
   m
 }
 
-ibdkinship.prepareTest <- function(cutoff, path, sims = NULL) {
+ibdkinship.prepareTest <- function(cutoff, path, sims = NULL, seed = 1234) {
   metadata = pedsMetadata(ibdrel_unilineal$peds)
   peds.to.include <- metadata |>
-    filter(eqclass %in% c("L1", "hS", "A", "L2", "1C0R",
-                          "1C1R", "2C0R", "2C1R", "3C")) |>
+    filter(rel.eqclass %in% c("L1", "hS", "A", "L2", "1C0R",
+                          "1C1R", "2C0R", "2C1R", "3C0R")) |>
     select(rel) |> as.vector()
   distant.peds.to.include <- metadata |>
     filter(degree > 7) |>
@@ -315,7 +315,8 @@ ibdkinship.prepareTest <- function(cutoff, path, sims = NULL) {
   annotation <- sapply(peds, annotatePedigree)
 
   if (is.null(sims)) {
-    sims <- ibdSimulations(peds, N = 100, keep = "nonzero", cutoff = 5)
+    sims <- ibdSimulations(peds, N = 100, keep = "nonzero", cutoff = cutoff)
+    names(sims) <- annotation
   }
 
 
@@ -335,18 +336,23 @@ ibdkinship.prepareTest <- function(cutoff, path, sims = NULL) {
   segments <- lapply(seq_along(sims), function(sidx) {
     s = sims[[sidx]]
     ped = peds[[sidx]]
-    ibdsim2::findPattern(s, pattern = list(carriers = identifyLeaves(ped)),
+    ibdsim2::findPattern(s, pattern = list(carriers = specifyUnilineal(ped)),
                          cutoff = cutoff, unit = "cm")
   })
   names(segments) <- names(sims)
 
-  lookup = lookupClass(NULL, "eqclass", "rel", metadata, T)
+  lookup = lookupClass(NULL, "rel.eqclass", "rel", metadata, T)
   group = lookup[names(segments)]
   merged_segments <- lapply(split(seq_along(segments), group), function(i) unlist(segments[i], recursive = F))
 
+  set.seed(seed)
 
   for (i in 1:length(merged_segments)) {
     sim_rel = merged_segments[[i]]
+
+    to.keep = sample(length(sim_rel),100)
+    sim_rel = sim_rel[to.keep]
+
     rel = names(merged_segments)[i]
     ibdkinship_name = names(ibdkinship_names)[which(ibdkinship_names == rel)]
 
@@ -371,10 +377,140 @@ ibdkinship.prepareTest <- function(cutoff, path, sims = NULL) {
 
       write.table(rel_chr, file = writepath, col.names = F,
                   quote = F, row.names = F)
-
     }
+  }
+}
+
+ibdkinship.loadSegments <- function(path) {
+  files = list.files(path)
+
+  data <- data.frame(sample = factor(),
+                     ibd = numeric(),
+                     chr = factor(),
+                     rel = character())
+
+  for (i in 1:length(files)) {
+    f = files[i]
+
+    name = strsplit(f, "-")[[1]]
+    chr = gsub("\\D", "", name[1])
+    rel = gsub(".txt", "", name[2])
+
+    filepath <- paste0(path, f)
+
+    if(file.info(filepath)$size == 0) {
+      next
+    }
+
+    file = read.table(filepath)
+    colnames(file) <- c("sample", "ibd")
+
+    file$chr <- chr
+    file$rel <- rel
+
+    data <- rbind(data, file)
 
   }
 
+  data
 
 }
+
+rels.to.ibdrel <- data.frame(original = c("1cor", "1cousin", "2cor", "2cousin", "3cousin", "avuncular", "grand",
+                                          "hsibling", "pach", "unrelated"),
+                             ibdrel = c("1C1R", "1C0R", "2C1R", "2C0R", "3C0R", "A", "L2",
+                                        "hS", "L1", "distant"))
+
+ibdkinship.loadResults <- function(path) {
+  files <- list.files(path, pattern = "_final_inference.txt$")
+
+  result <- data.frame(sampleID = factor(),
+                       PredictedPedigree = factor(),
+                       TruePedigree = factor())
+
+  for (i in 1:length(files)) {
+    f = files[i]
+
+    rel = strsplit(f, "_")[[1]][1]
+
+    filepath = paste0(path, f)
+
+    file = read.table(filepath, header = TRUE)
+
+    file$TruePedigree <- rel
+
+    result <-rbind(result, file)
+  }
+
+  result <- left_join(result, rels.to.ibdrel |> rename("true" = "ibdrel"), by = c("TruePedigree" = "original"))
+  result <- left_join(result, rels.to.ibdrel |> rename("pred" = "ibdrel"), by = c("PredictedPedigree" = "original"))
+
+  result
+}
+
+# If model is reduced, only relationships in IBDKinship is included
+ibdrel.with.ibdkinship <- function(path.data, cutoff, reduceModel = TRUE) {
+  metadata <- pedsMetadata(ibdrel_unilineal$peds)
+
+  rels.to.include <- metadata |>
+    filter(rel.eqclass %in% rels.to.ibdrel$ibdrel) |>
+    select(rel)
+  rels.to.include <- unique(rels.to.include$rel)
+  distant.rels.to.include <- metadata |>
+    filter(degree > 7) |>
+    select(rel) |> as.vector()
+  distant.rels.to.include <- unique(distant.rels.to.include$rel)
+
+  rels.to.include <- c(rels.to.include, distant.rels.to.include)
+
+  obsdata <- ibdkinship.loadSegments(path.data) |>
+    group_by(sample, rel) |>
+    summarise(obs = list(ibd)) |>
+    left_join(rels.to.ibdrel, by = c("rel" = "original"))
+
+  custom.model.data <- removePeds(ibdrel_unilineal, rels.to.include, mode = "include")
+
+  if (isTRUE(reduceModel)) {
+    model = fitModel(custom.model.data, features = c("count", "length"), cutoff = cutoff, collapseDistant = F)
+  } else {
+    model = fitModel(features = c("count", "length"), cutoff = cutoff, collapseDistant = F)
+  }
+
+  pred = predict(obsdata$obs, model, sort = FALSE)
+  true <- obsdata$ibdrel
+
+  #top = colnames(pred$eqclass)[max.col(pred$eqclass)]
+
+  list(pred = pred, true = true)
+
+}
+
+classificationRates <- function(pred, true) {
+
+  if (is.null(dim(pred))) {
+    top = pred
+    classes = unique(true)
+  } else {
+    classes = colnames(pred)
+    top = classes[max.col(pred)]
+  }
+
+
+  rates <- expand.grid(classes, classes)
+  rates$count <- 0
+
+  for (i in 1:length(top)) {
+    t = true[i]
+    p = top[i]
+
+    target = which(rates$Var1 == t & rates$Var2 == p)
+
+    rates[target, 3] = rates[target, 3] + 1
+  }
+
+  rates$fraction = rates$count / ave(rates$count, rates$Var1, FUN = sum)
+
+  rates
+
+}
+

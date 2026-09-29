@@ -234,40 +234,30 @@ strReverse <- function(x)
   sapply(lapply(strsplit(x, NULL), rev), paste, collapse="") # Get the reverse of a stirng, e.g. a sexpat
 
 
-#'
-#' @export
-removeSymmetries <- function(rels.df) {
-  rels.df$sexPathRev = strReverse(rels.df$sexPath)
-  rels.df <- rels.df[!duplicated(apply(rels.df, 1, function(x)
-    paste(sort(x), collapse = ''))),]
-  rels.df <- subset(rels.df, select = -c(sexPathRev))
-  return (rels.df)
-}
-
 
 # ---- CREATING PEDIGREES ----
 
 #' @export
-identifyLeaves = function(pedigree) {
-  leaves = pedtools::leaves(pedigree)
+specifyUnilineal = function(pedigree) {
+  individuals = pedtools::leaves(pedigree)
 
   # "Leaves" are not defined for lineal relationships
-  if (length(leaves) < 2) {
-    leaves = c(pedigree$ID[1], leaves)
+  if (length(individuals) < 2) {
+    individuals = c(pedigree$ID[1], individuals)
   }
 
-  return (leaves)
+  return (individuals)
 }
 
 
 # The path depends on whether the relationship is full or half
-getPath = function(pedigree, leaves = NULL) {
+getPath = function(pedigree, ids = NULL) {
 
-  if (is.null(leaves)) {
-    leaves = identifyLeaves(pedigree)
+  if (is.null(ids)) {
+    ids = specifyUnilineal(pedigree)
   }
 
-  rel = verbalisr::verbalise(pedigree, ids = leaves)
+  rel = verbalisr::verbalise(pedigree, ids = ids)
 
   # Only supporting unilineal relationships as of now
 
@@ -288,13 +278,13 @@ getPath = function(pedigree, leaves = NULL) {
 
     # Check if start and end correspond to "leaves"
 
-    if (path[1] %in% leaves) {
+    if (path[1] %in% ids) {
       path = path[-1]
     } else {
       stop()
     }
 
-    if (path[length(path)] %in% leaves) {
+    if (path[length(path)] %in% ids) {
       path = path[-length(path)]
     }
   }
@@ -393,10 +383,10 @@ constructPedigrees = function(pedigrees_df) {
 #' @export
 annotatePedigree = function(ped, ids = NULL) {
   if (is.null(ids)) {
-    leaves = identifyLeaves(ped)
+    ids = specifyUnilineal(ped)
   }
 
-  verb <- verbalisr::verbalise(ped, ids = leaves)
+  verb <- verbalisr::verbalise(ped, ids = ids)
 
   # Iterat over unilineal relationships
   for (i in 1:length(verb)) {
@@ -407,11 +397,9 @@ annotatePedigree = function(ped, ids = NULL) {
     removal = rel$removal
     ng = if (removal > 1) removal - 1 else 0
 
-
-
     switch(type,
            lineal = {
-             annot = paste0("L",degree)
+             annot = paste0(if(degree > 2) paste0("G(",degree-2,")"), if(degree > 1) "G",  "P")
            },
            sibling = {
              annot = if(half) "hS" else "S"
@@ -421,7 +409,7 @@ annotatePedigree = function(ped, ids = NULL) {
            },
            cousin = {
              cousDeg = min(length(rel$v1),length(rel$v2))-1
-             annot = paste0(if(half) "h",cousDeg,"C",removal,"R")
+             annot = paste0(if(half) "h",cousDeg,"C", if(removal > 0) paste0(removal,"R"))
            }
     )
 
@@ -454,9 +442,8 @@ condenseSexpath <- function(sexpath) {
 #' @export
 pedsMetadata = function(pedlist) {
 
-  if (is.null(names(pedlist))) {
-    names(pedlist) = sapply(pedlist, annotatePedigree)
-  }
+  names(pedlist) = sapply(pedlist, annotatePedigree)
+
 
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
@@ -472,44 +459,44 @@ pedsMetadata = function(pedlist) {
 
   metadata$kinship = sapply(pedlist, pedKinship)
 
-  donnelly.classes = groupDonnelly(pedlist, names(pedlist))
+  equivalence.classes = groupEquivalence(pedlist, names(pedlist))
 
-  metadata = merge(metadata, donnelly.classes,
+  metadata = merge(metadata, equivalence.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
 
-  metadata$sexconfig <- sapply(metadata$eqclass.detailed, sexConfig)
+  metadata$sexconfig <- sapply(metadata$sex.eqclass, sexConfig)
 
 
   return(metadata)
 }
 
-sexConfig = function(eqclass.detailed) {
-  strsplit(eqclass.detailed, "-")[[1]][2]
+sexConfig = function(sex.eqclass) {
+  strsplit(sex.eqclass, "-")[[1]][2]
 }
 
 pedCode = function(ped) {
-  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$code
+  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$code
 }
 
 pedDetails = function(ped) {
-  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$rel
+  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$rel
 }
 
 pedDegree = function(ped) { # Only supporting unilineal relationships as of now
-  verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]$degree
+  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$degree
 }
 
 pedKappa = function(ped, which.kappa) { # Only supporting unilineal relationships as of now
-  ribd::kappaIBD(ped, ids = identifyLeaves(ped))[which.kappa]
+  ribd::kappaIBD(ped, ids = specifyUnilineal(ped))[which.kappa]
 
 }
 
 pedKinship= function(ped) { # Only supporting unilineal relationships as of now
-  ribd::kinship(ped, ids = identifyLeaves(ped))
+  ribd::kinship(ped, ids = specifyUnilineal(ped))
 }
 
 pedType = function(ped) {
-  v <- verbalisr::verbalise(ped, ids = identifyLeaves(ped))[[1]]
+  v <- verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]
 
   type = v$type
 
@@ -521,7 +508,7 @@ pedType = function(ped) {
 }
 
 
-donnellyRep <- function(degree, half) {
+equivalenceRep <- function(degree, half) {
 
   # Special case: Degree 1 (and 0) have no cousin relationships. These are sibling
   if (degree %in% c(0,0)) {
@@ -542,8 +529,8 @@ donnellyRep <- function(degree, half) {
   return (list(cousDeg = cousDeg.rep, removal = min(removal)))
 }
 
-donnellyAnnot <- function(degree, half) {
-  rep <- donnellyRep(degree, half)
+equivalenceAnnot <- function(degree, half) {
+  rep <- equivalenceRep(degree, half)
   ped <- pedtools::cousinPed(degree = rep$cousDeg, removal = rep$removal, half = half)
   annot <- annotatePedigree(ped)
   annot <- strsplit(annot, "-")[[1]][1] # Remove sexpath, to be appended later
@@ -555,10 +542,10 @@ donnellyAnnot <- function(degree, half) {
 # Only support unilieal relationships as of now
 # Avuncular and cousin are equal in this setting
 #' @export
-groupDonnelly = function(pedlist, annotation) {
+groupEquivalence = function(pedlist, annotation) {
   i = 1
   for (ped in pedlist) {
-    verb = verbalisr::verbalise(ped, ids = identifyLeaves(ped))
+    verb = verbalisr::verbalise(ped, ids = specifyUnilineal(ped))
     rel = annotation[i]
     type = verb[[1]]$type
     full = verb[[1]]$full
@@ -574,12 +561,12 @@ groupDonnelly = function(pedlist, annotation) {
     if (type == "cousin") {
 
       if(isTRUE(full)) {
-        annot = donnellyAnnot(degree, half = F)
+        annot = equivalenceAnnot(degree, half = F)
 
         class.identifier.detailed = paste0(annot,"-",sexpath)
         class.identifier = annot
       } else {
-        annot = donnellyAnnot(degree, half = T)
+        annot = equivalenceAnnot(degree, half = T)
 
         class.identifier.detailed = paste0(annot,"-",sexpath)
         class.identifier = annot
@@ -594,7 +581,7 @@ groupDonnelly = function(pedlist, annotation) {
         class.identifier.detailed = rel
         class.identifier = strsplit(rel, "-")[[1]][1]
       } else {
-        annot = donnellyAnnot(degree, half = TRUE)
+        annot = equivalenceAnnot(degree, half = TRUE)
 
         class.identifier.detailed = paste0(annot, "-", sexpath)
         class.identifier = annot
@@ -608,12 +595,12 @@ groupDonnelly = function(pedlist, annotation) {
 
 
     if (i == 1) {
-      grouper = data.frame(eqclass.detailed = class.identifier.detailed,
-                           eqclass = class.identifier,
+      grouper = data.frame(sex.eqclass = class.identifier.detailed,
+                           rel.eqclass = class.identifier,
                            rel = rel)
     } else {
-      grouper = rbind(grouper, data.frame(eqclass.detailed = class.identifier.detailed,
-                                          eqclass = class.identifier,
+      grouper = rbind(grouper, data.frame(sex.eqclass = class.identifier.detailed,
+                                          rel.eqclass = class.identifier,
                                           rel = rel))
     }
 
@@ -775,7 +762,7 @@ classTranslator <- function(class, resolution) {
 
 #'
 #'@export
-lookupClass = function(class, to, from, metadata, collapseDistant) {
+lookupClass = function(class, to, from, metadata, collapseDistant = FALSE) {
 
   if (isTRUE(collapseDistant)) {
     metadata[metadata$degree > 7, to] <- "distant"

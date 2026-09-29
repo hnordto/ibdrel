@@ -37,7 +37,7 @@ ibdSimulations = function(pedlist,
       seed = seeds[i]
 
       if (is.null(ids)) { # Currently only supporting pedigrees with natural "leaves"
-        ids = identifyLeaves(ped)
+        ids = specifyUnilineal(ped)
       }
 
       simulation = ibdsim2::ibdsim(x = ped, N = N, seed = seed,
@@ -59,7 +59,7 @@ ibdSimulations = function(pedlist,
       ped = pedlist[[i]]
 
       if (is.null(ids)) {
-        ids = identifyLeaves(ped)
+        ids = specifyUnilineal(ped)
       }
 
       simulations_tmp = list()
@@ -143,7 +143,7 @@ lengthIBD = function(simlist,
 
 
 
-    segments = ibdsim2::findPattern(sim, pattern = list(carriers = identifyLeaves(ped)),
+    segments = ibdsim2::findPattern(sim, pattern = list(carriers = specifyUnilineal(ped)),
                                     cutoff = cutoff, unit = "cm")
     segments = lapply(segments, extractLength)
 
@@ -159,10 +159,10 @@ lengthIBD = function(simlist,
 
 #'
 #'@export
-aggregateSegments = function(segments, metadata, metadata.agg.column, collapseDistant = TRUE) {
+aggregateSegments = function(segments, metadata, metadata.agg.column) {
 
 
-  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, collapseDistant)
+  lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata)
 
   agg.ids = lookup[names(segments)]
 
