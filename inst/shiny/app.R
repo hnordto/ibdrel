@@ -88,8 +88,8 @@ server <- function(input, output, session) {
         hr(),
         h5("Feature selection"),
         pickerInput("featureSelection", NULL,
-                    choices = c("count", "total"),
-                    selected = c("count", "total"),
+                    choices = c("count", "total", "length"),
+                    selected = c("count", "length"),
                     options = pickerOptions(
                       actionsBox = TRUE,
                       size = 10,

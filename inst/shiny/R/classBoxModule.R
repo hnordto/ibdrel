@@ -325,7 +325,7 @@ jointDistPlot <- function(data, resolution, selected.class) {
 pedPlot <- function(ped) {
 
 
-  ped.leaves = ibdrel::identifyLeaves(ped)
+  ped.leaves = ibdrel::specifyIndividuals(ped)
   ped = ped |> pedtools::setSex(leaves, sex= 0)
   verb = verbalisr::verbalise(ped, ids = ped.leaves)[[1]]$rel
 

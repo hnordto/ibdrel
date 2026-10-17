@@ -17,11 +17,11 @@ w_resolution = function(id) {
     radioGroupButtons(
       inputId = NS(id,"resTabs"),
       label = NULL,
-      choices = c("Sex" = "eqclass.detailed",
-                  "Rel" = "eqclass",
-                  "Kap" = "kappa",
-                  "Kin" = "kinship",
-                  "Deg" = "degree"),
+      choices = c("Sex" = "sex.eqclass",
+                  "Rel" = "rel.eqclass",
+                  "Kap" = "kap",
+                  "Kin" = "kin",
+                  "Deg" = "deg"),
       justified = TRUE,
       individual = TRUE,
       status = "olive"
@@ -102,6 +102,7 @@ likelihoodBoxServer = function(id, data) {
         tab <- table_data()
         class_codes <- tab$class_codes
         selected_class <- class_codes[idx]
+        print(selected_class)
         data[["selectedClass"]] <- selected_class
       }
     })
@@ -137,9 +138,9 @@ computeLikelihoodTable <- function(data, resolution) {
   threshold = data[["mdistthreshold"]][[resolution]]
   metadata = data[["metadata"]]
 
-  if (normalize) {
-    likelihoods = ibdrel::normalizeLikelihoods(likelihoods)
-  }
+  #if (normalize) {
+  #  likelihoods = ibdrel::normalizeLikelihoods(likelihoods)
+  #}
 
 
   if (filter) {
@@ -165,16 +166,16 @@ computeLikelihoodTable <- function(data, resolution) {
     metadata.class <- metadata[metadata$class == x,]$class
     ibdrel::classTranslator(x, resolution)
   })
-  classlabels = if (!(resolution == "kappa")) { gsub("\\s*\\([^)]*\\)", "", classlabels) } else {classlabels}
-  classlabels = if (!(resolution == "kappa")) {firstup(classlabels)} else {classlabels} # First letter to uppercase
+  classlabels = if (!(resolution == "kap")) { gsub("\\s*\\([^)]*\\)", "", classlabels) } else {classlabels}
+  classlabels = if (!(resolution == "kap")) {firstup(classlabels)} else {classlabels} # First letter to uppercase
 
 
   classlabels <- setNames(classlabels, names(likelihoods))
 
-  if (resolution == "eqclass.detailed") {
-    eqclass = as.character(metadata.subset$eqclass)
+  if (resolution == "sex.eqclass") {
+    eqclass = as.character(metadata.subset$rel.eqclass)
     eqclass = sapply(eqclass, function(x) {
-      classTranslator(x, "eqclass")
+      classTranslator(x, "rel.eqclass")
     })
   }
 
@@ -184,8 +185,8 @@ computeLikelihoodTable <- function(data, resolution) {
 
   kappa =  as.character(paste0("(",kappa0, ",", kappa1, ",", kappa2, ")"))
   kappa[kappa == "(NA,NA,NA)"] <- ""
-  kinship = as.character(MASS::fractions(metadata.subset$kinship))
-  degree = as.character(metadata.subset$degree)
+  kinship = as.character(MASS::fractions(metadata.subset$kin))
+  degree = as.character(metadata.subset$deg)
   sexconfig = as.character(metadata.subset$sexconfig)
 
   kinship[is.na(kinship)] <- "<1/256"
@@ -197,7 +198,7 @@ computeLikelihoodTable <- function(data, resolution) {
                    Class = names(likelihoods),
                    Posterior = round(likelihoods, 2))
 
-  if (resolution == "eqclass.detailed") {
+  if (resolution == "sex.eqclass") {
     df <- cbind(df[,1:3, drop = FALSE],
                 Sex = sexconfig,
                 df[,4,drop=FALSE],
@@ -208,7 +209,7 @@ computeLikelihoodTable <- function(data, resolution) {
     class_rename = "Rel"
   }
 
-  if (resolution == "eqclass") {
+  if (resolution == "rel.eqclass") {
     df <- cbind(df,
                 Kappa = kappa,
                 Kinship = kinship,
@@ -217,7 +218,7 @@ computeLikelihoodTable <- function(data, resolution) {
     class_rename = "Rel"
   }
 
-  if (resolution == "kappa") {
+  if (resolution == "kap") {
     df <- cbind(df,
                 Kinship = kinship,
                 Degree = degree)
@@ -226,13 +227,13 @@ computeLikelihoodTable <- function(data, resolution) {
   }
 
 
-  if (resolution == "kinship") {
+  if (resolution == "kin") {
     df <- cbind(df,
-                Degree = metadata.subset$degree)
+                Degree = metadata.subset$deg)
     class_rename = "\u03C6"
   }
 
-  if (resolution == "degree") {
+  if (resolution == "deg") {
     class_rename = "Degree"
   }
 

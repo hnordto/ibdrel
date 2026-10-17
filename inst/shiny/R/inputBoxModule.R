@@ -37,7 +37,7 @@ helpWidget = function(id) {
 peds = ibdrel::ibdrel_unilineal$peds
 
 annotation <- sapply(peds, annotatePedigree)
-annotation.readable <- sapply(annotation, classTranslator, "eqclass.detailed")
+annotation.readable <- sapply(annotation, classTranslator, "sex.eqclass")
 names(annotation) <- annotation.readable
 names(peds) <- annotation
 
@@ -45,14 +45,10 @@ segmentData = ibdrel::ibdrel_unilineal$segments
 names(segmentData) <- annotation
 metadata = ibdrel::pedsMetadata(peds)
 
-supported.features <- c("count", "total", "median", "longest", "shortest")
+
 input.types <- c("Segments" = "segments", "Summaries (not yet supported!)" = "summaries")
 
-featureSelection.default = list("eqclass.detailed" = c("count", "total", "length"),
-                                "eqclass" = c("count", "total", "length"),
-                                "kappa" = c("count", "total", "length"),
-                                "kinship" = c("count", "total", "length"),
-                                "degree" = c("count", "total", "length"))
+
 
 inputBoxUI <- function(id) {
 
@@ -209,27 +205,24 @@ inputBoxServer = function(id, data) {
       featureSelection = data[["featureSelection"]]
       input_type = data[["inputType"]]
 
-      resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
-      data[["resolutions"]] <- resolutions
+      #resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
+      #data[["resolutions"]] <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
 
-      data[["segments"]] = sapply(resolutions, function(x) {
-        aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
-      }, simplify = FALSE)
-
-      data[["metadata"]] = metadata
-      data[["peds"]] = peds
+      #data[["segments"]] = sapply(RESOLUTIONS, function(x) {
+      #  aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
+      #}, simplify = FALSE)
 
      # data[["features"]] <- lapply(data[["segments"]], function(x) {
     #    lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
     #  })
 
       if (input_type == "segments") {
-        features <- lapply(names(data[["segments"]]), function(nm) {
-          x <- data[["segments"]][[nm]]
-          lapply(x, prepareFeatures, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
-        })
-        names(features) = names(data[["segments"]])
-        data[["features"]] <- features
+        #features <- lapply(names(data[["segments"]]), function(nm) {
+        #  x <- data[["segments"]][[nm]]
+        #  lapply(x, prepareFeatures, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
+        #})
+        #names(features) = names(data[["segments"]])
+        #data[["features"]] <- features
 
 
 
@@ -237,12 +230,20 @@ inputBoxServer = function(id, data) {
         #    lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
         #  })
 
-        pdfs <- lapply(names(data[["segments"]]), function(nm) {
-          x <- data[["segments"]][[nm]]
-          lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
-        })
-        names(pdfs) <- names(data[["segments"]])
-        data[["pdfs"]]  <- pdfs
+
+        model = fitModel(cutoff = cutoff, features = DEFAULT.FEATURES)
+        data[["model"]] = model
+        data[["pdfs"]] <- model$pdfs
+        data[["peds"]] <- model$peds
+        data[["metadata"]] = metadata
+
+
+        #pdfs <- lapply(names(data[["segments"]]), function(nm) {
+        #  x <- data[["segments"]][[nm]]
+        #  lapply(x, preparePdfs, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
+        #})
+        #names(pdfs) <- names(data[["segments"]])
+        #data[["pdfs"]]  <- pdfs
       } else if (input_type == "summaries") {
         features <- lapply(data[["segments"]], function(x) {
           lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
@@ -254,11 +255,19 @@ inputBoxServer = function(id, data) {
 
       }
 
-      # Features, only count+total for mdists
-      ct <- lapply(data[["segments"]], function(x) {
+      segments.agg <- sapply(RESOLUTIONS, function(x) {
+        aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
+      }, simplify = FALSE)
+      features.ct <- lapply(segments.agg, function(x) {
         lapply(x, prepareFeatures, featureSel = c("count", "total"), cutoff = cutoff)
       })
-      data[["ct"]] <- ct
+      data[["ct"]] <- features.ct
+
+      # Features, only count+total for mdists
+      #ct <- lapply(data[["segments"]], function(x) {
+      #  lapply(x, prepareFeatures, featureSel = c("count", "total"), cutoff = cutoff)
+      #})
+      #data[["ct"]] <- ct
 
     })
 
@@ -266,7 +275,7 @@ inputBoxServer = function(id, data) {
     observe({
       req(data[["selectedTab"]])
       data[["metadata"]]$class = data[["metadata"]][[data[["selectedTab"]]]]
-      data[["classes"]] = names(data[["segments"]][[data[["selectedTab"]]]])
+      #data[["classes"]] = names(data[["segments"]][[data[["selectedTab"]]]])
     })
 
 
@@ -290,9 +299,18 @@ inputBoxServer = function(id, data) {
         obs = obs[obs >= cutoff]
         data[["obs"]] = obs
 
-        data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
-          classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
+        likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE)
+
+        # From matrix (standard format) to named vectors
+        data[["likelihoods"]] = lapply(likelihoods, function(x) {
+          lik = as.vector(x)
+          names(lik) <- colnames(x)
+          lik
         })
+
+        #data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
+        #  classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
+        #})
 
         data[["mdists"]] = lapply(data[["ct"]], function(x) {
           l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
@@ -398,7 +416,7 @@ inputBoxServer = function(id, data) {
     })
     observeEvent(input$simulateButton, {
       ped = data[["peds"]][[input$simrel]]
-      simids = ibdrel::identifyLeaves(ped)
+      simids = ibdrel::specifyIndividuals(ped)
 
       segs = ibdsim2::ibdsim(ped, ids = simids, N = 1,
                              verbose = FALSE) |>
