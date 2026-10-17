@@ -238,12 +238,12 @@ strReverse <- function(x)
 # ---- CREATING PEDIGREES ----
 
 #' @export
-specifyUnilineal = function(pedigree) {
-  individuals = pedtools::leaves(pedigree)
+specifyIndividuals = function(ped, type = "simple_unilineal") {
+  individuals = pedtools::leaves(ped)
 
   # "Leaves" are not defined for lineal relationships
   if (length(individuals) < 2) {
-    individuals = c(pedigree$ID[1], individuals)
+    individuals = c(ped$ID[1], individuals)
   }
 
   return (individuals)
@@ -254,7 +254,7 @@ specifyUnilineal = function(pedigree) {
 getPath = function(pedigree, ids = NULL) {
 
   if (is.null(ids)) {
-    ids = specifyUnilineal(pedigree)
+    ids = specifyIndividuals(pedigree)
   }
 
   rel = verbalisr::verbalise(pedigree, ids = ids)
@@ -345,7 +345,7 @@ constructPedigrees = function(pedigrees_df) {
 
       if(!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = pedtools::swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds, verbose = FALSE)
       }
 
 
@@ -355,7 +355,7 @@ constructPedigrees = function(pedigrees_df) {
 
       if(!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = pedtools::swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds, verbose = FALSE)
       }
 
 
@@ -364,7 +364,7 @@ constructPedigrees = function(pedigrees_df) {
 
       if (!(is.na(sexPath))) {
         swpIds = getSwpSexPath(ped, sexPath)
-        ped = pedtools::swapSex(ped, swpIds)
+        ped = pedtools::swapSex(ped, swpIds, verbose = FALSE)
       }
 
     }
@@ -381,9 +381,9 @@ constructPedigrees = function(pedigrees_df) {
 }
 
 #' @export
-annotatePedigree = function(ped, ids = NULL) {
+annotatePedigree = function(ped, ids = NULL, ignoreSex = FALSE) {
   if (is.null(ids)) {
-    ids = specifyUnilineal(ped)
+    ids = specifyIndividuals(ped)
   }
 
   verb <- verbalisr::verbalise(ped, ids = ids)
@@ -413,15 +413,24 @@ annotatePedigree = function(ped, ids = NULL) {
            }
     )
 
-    sexpath = rel$sexPath
+    if (isFALSE(ignoreSex)) {
 
-    sexpath.annot <- condenseSexpath(sexpath)
+      sexpath = rel$sexPath
 
-    if (sexpath == "") {
-      annotation = paste0(annot)
+      sexpath.annot <- condenseSexpath(sexpath)
+
+
+
+      if (sexpath == "") {
+        annotation = paste0(annot)
+      } else {
+        annotation = paste0(annot, "-", sexpath.annot)
+      }
+
     } else {
-      annotation = paste0(annot, "-", sexpath.annot)
+      annotation = annot
     }
+
 
   }
 
@@ -448,18 +457,18 @@ pedsMetadata = function(pedlist) {
   metadata = data.frame(rel = names(pedlist))
   metadata$code = sapply(pedlist, pedCode)
   metadata$details = lapply(pedlist, pedDetails)
-  metadata$degree = sapply(pedlist, pedDegree)
+  metadata$deg = sapply(pedlist, pedDegree)
   metadata$type = sapply(pedlist, pedType)
 
   metadata$kappa0 = sapply(pedlist, pedKappa, 1)
   metadata$kappa1 = sapply(pedlist, pedKappa, 2)
   metadata$kappa2 = sapply(pedlist, pedKappa, 3)
-  metadata$kappa = paste0(metadata$kappa0, "-", metadata$kappa1, "-",
+  metadata$kap = paste0(metadata$kappa0, "-", metadata$kappa1, "-",
                           metadata$kappa2)
 
-  metadata$kinship = sapply(pedlist, pedKinship)
+  metadata$kin = sapply(pedlist, pedKinship)
 
-  equivalence.classes = groupEquivalence(pedlist, names(pedlist))
+  equivalence.classes = groupEquivalence(pedlist)
 
   metadata = merge(metadata, equivalence.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
@@ -475,28 +484,28 @@ sexConfig = function(sex.eqclass) {
 }
 
 pedCode = function(ped) {
-  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$code
+  verbalisr::verbalise(ped, ids = specifyIndividuals(ped))[[1]]$code
 }
 
 pedDetails = function(ped) {
-  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$rel
+  verbalisr::verbalise(ped, ids = specifyIndividuals(ped))[[1]]$rel
 }
 
 pedDegree = function(ped) { # Only supporting unilineal relationships as of now
-  verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]$degree
+  verbalisr::verbalise(ped, ids = specifyIndividuals(ped))[[1]]$degree
 }
 
 pedKappa = function(ped, which.kappa) { # Only supporting unilineal relationships as of now
-  ribd::kappaIBD(ped, ids = specifyUnilineal(ped))[which.kappa]
+  ribd::kappaIBD(ped, ids = specifyIndividuals(ped))[which.kappa]
 
 }
 
 pedKinship= function(ped) { # Only supporting unilineal relationships as of now
-  ribd::kinship(ped, ids = specifyUnilineal(ped))
+  ribd::kinship(ped, ids = specifyIndividuals(ped))
 }
 
 pedType = function(ped) {
-  v <- verbalisr::verbalise(ped, ids = specifyUnilineal(ped))[[1]]
+  v <- verbalisr::verbalise(ped, ids = specifyIndividuals(ped))[[1]]
 
   type = v$type
 
@@ -508,7 +517,7 @@ pedType = function(ped) {
 }
 
 
-equivalenceRep <- function(degree, half) {
+equivalenceRep.dep <- function(degree, half) {
 
   # Special case: Degree 1 (and 0) have no cousin relationships. These are sibling
   if (degree %in% c(0,0)) {
@@ -537,15 +546,47 @@ equivalenceAnnot <- function(degree, half) {
   return (annot)
 }
 
+# Should do the following things: Give Eqclass sex code, eqclass detailed code, sex-aware representative, sex-averaged representative
+#' @export
+groupEquivalence = function(pedlist) {
+  annotation = sapply(pedlist, annotatePedigree)
+  names(pedlist) <- annotation
+
+  for (i in seq_along(pedlist)) {
+    ped = pedlist[[i]]
+    rel = annotation[i]
+    eqclass = equivalenceClass(ped)
+    sex.eqclass = equivalenceRep(eqclass)
+    rel.eqclass = equivalenceRep(eqclass, ignoreSex = TRUE)
+
+    if (i == 1) {
+      grouper = data.frame(rel = rel,
+                           eqclass = eqclass,
+                           sex.eqclass = sex.eqclass,
+                           rel.eqclass = rel.eqclass)
+    } else {
+      grouper = rbind(grouper, data.frame(
+        rel = rel,
+        eqclass = eqclass,
+        sex.eqclass = sex.eqclass,
+        rel.eqclass = rel.eqclass
+      ))
+    }
+
+  }
+
+  grouper
+}
+
 # More efficient approach using verbalisr() and skipping the simulation
 # Does not work on sex-specific paths
 # Only support unilieal relationships as of now
 # Avuncular and cousin are equal in this setting
-#' @export
-groupEquivalence = function(pedlist, annotation) {
+
+groupEquivalence.dep = function(pedlist, annotation) {
   i = 1
   for (ped in pedlist) {
-    verb = verbalisr::verbalise(ped, ids = specifyUnilineal(ped))
+    verb = verbalisr::verbalise(ped, ids = specifyIndividuals(ped))
     rel = annotation[i]
     type = verb[[1]]$type
     full = verb[[1]]$full
@@ -635,7 +676,7 @@ classTranslator <- function(class, resolution) {
     class = "distant"
   }
 
-  if (resolution == "eqclass.detailed" || resolution == "eqclass") {
+  if (resolution == "sex.eqclass" || resolution == "rel.eqclass") {
 
     if (class == "distant") {
       rel.write = "Distant"
@@ -665,7 +706,7 @@ classTranslator <- function(class, resolution) {
         rem <- rel.split[3]
         #rem <- numtimes(as.numeric(rel.split[3]))
 
-        if (rem == 0) {
+        if (rem == 0 || is.na(rem)) {
           rel.write <- paste0(half.write, cousDeg, " cousins")
 
         } else {
@@ -673,7 +714,7 @@ classTranslator <- function(class, resolution) {
         }
 
 
-      } else if (rel.split[1] == "G" || rel.split[1] == "A") {
+      } else if (rel.split[1] == "G" || rel.split[1] == "A" || rel.split[1] == "P") {
 
         if (grepl("\\(\\d+\\)", rel)) {
           rem <- gsub(".*\\((\\d+)\\).*", "\\1", rel)
@@ -683,13 +724,33 @@ classTranslator <- function(class, resolution) {
 
         if (!is.na(rem)) {
           if(rem > 1) {
-            rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
+
+            if (length(rel.split) > 5 & rel.split[6] == "P") {
+              rel.write <- paste0("G<sup>", rem, "</sup> grandparent")
+            } else {
+              rel.write <- paste0(half.write, "G<sup>", rem, "</sup> avuncular")
+            }
+
           } else {
-            rel.write <- paste0(half.write, "G avuncular")
+
+            if (length(rel.split) > 5 & rel.split[6] == "P") {
+              rel.write <- "G grandparent"
+            } else {
+              rel.write <- paste0(half.write, "G avuncular")
+            }
+
+
           }
 
         } else {
-          rel.write <- paste(half.write, "Avuncular")
+
+          if (rel.split[1] == "P") {
+            rel.write <- "Parent"
+          } else if (rel.split[1] == "G" & rel.split[2] == "P") {
+            rel.write <- "Grandparent"
+          } else if (rel.split[1] == "A") {
+            rel.write <- paste(half.write, "Avuncular")
+          }
         }
 
       } else if (rel.split[1] == "S") {
@@ -722,7 +783,7 @@ classTranslator <- function(class, resolution) {
     }
 
 
-  } else if (resolution == "kappa") {
+  } else if (resolution == "kap") {
 
     if (class == "distant") {
       rel.write = "Distant"
@@ -735,7 +796,7 @@ classTranslator <- function(class, resolution) {
       rel.write <- paste0("(", kappa0, " , ", kappa1, " , ", kappa2, ")")
     }
 
-  } else if (resolution == "kinship") {
+  } else if (resolution == "kin") {
 
     if (class == "distant") {
       rel.write = as.character(paste0("<",MASS::fractions(as.numeric(0.0039062500))))
@@ -744,7 +805,7 @@ classTranslator <- function(class, resolution) {
     }
 
 
-  } else if (resolution == "degree") {
+  } else if (resolution == "deg") {
 
     if (class == "distant") {
       rel.write <- ">7"
@@ -765,7 +826,7 @@ classTranslator <- function(class, resolution) {
 lookupClass = function(class, to, from, metadata, collapseDistant = FALSE) {
 
   if (isTRUE(collapseDistant)) {
-    metadata[metadata$degree > 7, to] <- "distant"
+    metadata[metadata$deg > 7, to] <- "distant"
   }
 
   lookup = metadata |>

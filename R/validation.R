@@ -336,7 +336,7 @@ ibdkinship.prepareTest <- function(cutoff, path, sims = NULL, seed = 1234) {
   segments <- lapply(seq_along(sims), function(sidx) {
     s = sims[[sidx]]
     ped = peds[[sidx]]
-    ibdsim2::findPattern(s, pattern = list(carriers = specifyUnilineal(ped)),
+    ibdsim2::findPattern(s, pattern = list(carriers = specifyIndividuals(ped)),
                          cutoff = cutoff, unit = "cm")
   })
   names(segments) <- names(sims)
