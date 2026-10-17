@@ -61,7 +61,7 @@ fitModel <- function(data = NULL,
   # TEMP: WITH NAMES UNTIL DATA RAW IS UPDATED
   peds = ibdrel_unilineal$peds
   names(peds) = sapply(peds, annotatePedigree)
-  peds = peds[names(data)]
+ # peds = peds[names(data)]
 
   model = list(
     pdfs = pdfs,
@@ -76,6 +76,8 @@ fitModel <- function(data = NULL,
 
 }
 
+#'
+#' @export
 print.ibdrelModel <- function(x, ...) {
   cat("<ibdrelModel>\n")
   cat("Number of probability density functions (sex-aware pedigree relationships):", length(x$pdfs), "\n")

@@ -1,13 +1,15 @@
 #'
 #' @export
 predict.ibdrelModel <- function(object, newdata,
-                    normalize = TRUE, sort = TRUE, collapseDistant = TRUE) {
+                    metadata = NULL, normalize = TRUE, sort = TRUE, collapseDistant = TRUE) {
+
+  # Pre-loaded metadata speeds up prediction
 
   pdfs = object$pdfs
 
   allobs = get_inner_element(newdata)
 
-  if (length(obs) > 1 && isTRUE(sort)) {
+  if (length(allobs) > 1 && isTRUE(sort)) {
     stop("Cannot sort multiple observations, as ranks may differ. Set sort = FALSE.")
   }
 
@@ -16,23 +18,30 @@ predict.ibdrelModel <- function(object, newdata,
   })
   pred = do.call(rbind, pred)
 
-  pred <- lapply(RESOLUTIONS, function(x) {
-    aggregateProbs(pred, pedsMetadata(model$peds), x, collapseDistant)
-  })
-  names(pred) <- RESOLUTIONS
+  if (is.null(metadata)) {
+    metadata = pedsMetadata(object$peds)
+  }
 
 
   if (normalize) {
-    pred = lapply(pred, function(mat) {
-      t(apply(mat, 1, normalizeLikelihoods))
-    })
-  }
+    pred = t(apply(pred, 1, normalizeLikelihoods))
 
+
+    pred <- lapply(RESOLUTIONS, function(x) {
+      aggregateProbs(pred, metadata, x, collapseDistant)
+    })
+    names(pred) <- RESOLUTIONS
+  } else {
+    pred <- lapply(RESOLUTIONS, function(x) {
+      aggregateLogs(pred, metadata, x, collapseDistant)
+    })
+    names(pred) <- RESOLUTIONS
+  }
 
   return (pred)
 }
 
-aggregateProbs <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
+aggregateLookup <- function(metadata, metadata.agg.column, collapseDistant) {
   lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, collapseDistant)
 
   if (isTRUE(collapseDistant)) {
@@ -41,7 +50,21 @@ aggregateProbs <- function(pred, metadata, metadata.agg.column, collapseDistant 
 
   agg.ids = lookup[colnames(pred)]
 
+  agg.ids
+}
+
+aggregateProbs <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
+
+  agg.ids = aggregateLookup(metadata, metadata.agg.column, collapseDistant)
+
   t(rowsum(t(pred), group = agg.ids))
+}
+
+# Perhaps numerically unstable
+aggregateLogs <- function(pred, metadata, metadata.agg.column, collapseDistant = TRUE) {
+  agg.ids = aggregateLookup(metadata, metadata.agg.column, collapseDistant)
+
+  t(log(rowsum(t(exp(pred)), group = agg.ids)))
 }
 
 # Helper function to retrieve each observation when multiple are inputted
