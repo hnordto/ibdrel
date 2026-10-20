@@ -45,9 +45,10 @@ fitModel <- function(data = NULL,
   }
 
   if (all(features == "default")) {
+    features = DEFAULT.FEATURES
 
-    pdfs = lapply(data, preparePdfs, featureSel = DEFAULT.FEATURES, cutoff = cutoff)
-    names(pdfs) <- names(data)
+    pdfs = lapply(data, preparePdfs, featureSel = features, cutoff = cutoff)
+
 
   } else {
     if (any(!(features %in% VALID.FEATURES))) {
@@ -58,16 +59,24 @@ fitModel <- function(data = NULL,
     pdfs = lapply(data, preparePdfs, featureSel = features, cutoff = cutoff)
   }
 
+  names(pdfs) <- names(data)
+
+
+
   # TEMP: WITH NAMES UNTIL DATA RAW IS UPDATED
   peds = ibdrel_unilineal$peds
   names(peds) = sapply(peds, annotatePedigree)
  # peds = peds[names(data)]
 
+  metadata = pedsMetadata(peds)
+
   model = list(
     pdfs = pdfs,
     cutoff = cutoff,
     features = features,
-    peds = peds
+    peds = peds,
+    segments = data,
+    metadata = metadata
   )
 
   class(model) <- "ibdrelModel"
