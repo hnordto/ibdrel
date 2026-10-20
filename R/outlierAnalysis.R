@@ -1,19 +1,18 @@
+#'
+#'@export
+outlierAnalysis <- function(object, ...) {
+  UseMethod("outlierAnalysis")
+}
 
+#'
+#'@export
 outlierAnalysis.ibdrelModel <- function(object, newdata, threshold = 0.95, collapseDistant = TRUE) {
 
   segments = object$segments
   metadata = object$metadata
+  cutoff = object$cutoff
 
-  featureSel = c("count", "total")
-
-  segments.agg <- lapply(RESOLUTIONS, function(x) {
-    aggregateSegments(segments, metadata, x, collapseDistant)
-  })
-  names(segments.agg) <- RESOLUTIONS
-
-  features.count.total <- lapply(segments.agg, function(x) {
-    lapply(x, prepareFeatures, featureSel = featureSel, cutoff = cutoff)
-  })
+  features.count.total <- extractCountTotal(model)
 
   if(!is.null(names(get_inner_element(newdata)))) {
     if(!any(names(get_inner_element(newdata)) %in% featureSel)) {
@@ -36,9 +35,35 @@ outlierAnalysis.ibdrelModel <- function(object, newdata, threshold = 0.95, colla
     })
   }
 
-
   return(outlier)
 
+}
+
+#'
+#'@export
+extractCountTotal <- function(object, ...) {
+  UseMethod("extractCountTotal")
+}
+
+#'
+#'@export
+extractCountTotal.ibdrelModel <- function(object, ...) {
+  segments = object$segments
+  metadata = object$metadata
+  cutoff = object$cutoff
+
+  featureSel = c("count", "total")
+
+  segments.agg <- lapply(RESOLUTIONS, function(x) {
+    aggregateSegments(segments, metadata, x, collapseDistant)
+  })
+  names(segments.agg) <- RESOLUTIONS
+
+  features.count.total <- lapply(segments.agg, function(x) {
+    lapply(x, prepareFeatures, featureSel = featureSel, cutoff = cutoff)
+  })
+
+  return (features.count.total)
 }
 
 reportOutlier.ibdrelModel <- function(object, newdata, threshold = 0.95, collapseDistant = TRUE) {

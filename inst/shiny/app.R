@@ -84,7 +84,8 @@ server <- function(input, output, session) {
         hr(),
         h5("Outlier detection"),
         numericInput("outlierThreshold", NULL,
-                     value = settings$outlierThreshold, min = 0, max = 1, step = 0.01),
+                     value = settings$outlierThreshold, min = 0, max = 1, step = 0.01,
+                     width = "auto"),
         hr(),
         h5("Feature selection"),
         pickerInput("featureSelection", NULL,
@@ -94,7 +95,7 @@ server <- function(input, output, session) {
                       actionsBox = TRUE,
                       size = 10,
                       selectedTextFormat = "count > 3"
-                    ), multiple = TRUE)
+                    ), multiple = TRUE, width = "auto")
 
       ),
       easyClose = TRUE,

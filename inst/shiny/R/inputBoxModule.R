@@ -34,7 +34,7 @@ helpWidget = function(id) {
 
 # Load data XX FIX LATER XX
 
-peds = ibdrel::ibdrel_unilineal$peds
+#peds = ibdrel::ibdrel_unilineal$peds
 
 annotation <- sapply(peds, annotatePedigree)
 annotation.readable <- sapply(annotation, classTranslator, "sex.eqclass")
@@ -43,12 +43,12 @@ names(peds) <- annotation
 
 segmentData = ibdrel::ibdrel_unilineal$segments
 names(segmentData) <- annotation
-metadata = ibdrel::pedsMetadata(peds)
+#metadata = ibdrel::pedsMetadata(peds)
 
 
 input.types <- c("Segments" = "segments", "Summaries (not yet supported!)" = "summaries")
 
-
+features.summaries <- c("count", "total")
 
 inputBoxUI <- function(id) {
 
@@ -196,6 +196,8 @@ inputBoxServer = function(id, data) {
 
     ns <- session$id
 
+    observe({ input_type = data[["inputType"]]})
+
     # Initialize model
     observe({
 
@@ -203,7 +205,6 @@ inputBoxServer = function(id, data) {
 
       cutoff = data[["cutoff"]]
       featureSelection = data[["featureSelection"]]
-      input_type = data[["inputType"]]
 
       #resolutions <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
       #data[["resolutions"]] <- c("eqclass.detailed", "eqclass", "kappa", "kinship", "degree")
@@ -216,7 +217,14 @@ inputBoxServer = function(id, data) {
     #    lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
     #  })
 
-      if (input_type == "segments") {
+      model = fitModel(cutoff = cutoff, features = DEFAULT.FEATURES)
+      data[["model"]] = model
+      data[["pdfs"]] <- model$pdfs
+      data[["peds"]] <- model$peds
+      data[["metadata"]] = model$metadata
+      data[["ct"]] = extractCountTotal(model)
+
+     # if (input_type == "segments") {
         #features <- lapply(names(data[["segments"]]), function(nm) {
         #  x <- data[["segments"]][[nm]]
         #  lapply(x, prepareFeatures, featureSel = featureSelection.default[[nm]], cutoff = cutoff)
@@ -231,11 +239,7 @@ inputBoxServer = function(id, data) {
         #  })
 
 
-        model = fitModel(cutoff = cutoff, features = DEFAULT.FEATURES)
-        data[["model"]] = model
-        data[["pdfs"]] <- model$pdfs
-        data[["peds"]] <- model$peds
-        data[["metadata"]] = metadata
+
 
 
         #pdfs <- lapply(names(data[["segments"]]), function(nm) {
@@ -244,24 +248,24 @@ inputBoxServer = function(id, data) {
         #})
         #names(pdfs) <- names(data[["segments"]])
         #data[["pdfs"]]  <- pdfs
-      } else if (input_type == "summaries") {
-        features <- lapply(data[["segments"]], function(x) {
-          lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
-        })
+      #} else if (input_type == "summaries") {
+      #  features <- lapply(data[["segments"]], function(x) {
+      #    lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
+       # })
 
-        pdfs <- lapply(data[["segments"]], function(x) {
-          lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
-        })
+      #  pdfs <- lapply(data[["segments"]], function(x) {
+      #    lapply(x, preparePdfs, featureSel = featureSelection, cutoff = cutoff)
+       # })
 
-      }
+      #}
 
-      segments.agg <- sapply(RESOLUTIONS, function(x) {
-        aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
-      }, simplify = FALSE)
-      features.ct <- lapply(segments.agg, function(x) {
-        lapply(x, prepareFeatures, featureSel = c("count", "total"), cutoff = cutoff)
-      })
-      data[["ct"]] <- features.ct
+      #segments.agg <- sapply(RESOLUTIONS, function(x) {
+      #  aggregateSegments(segmentData, metadata, x, collapseDistant = data[["distant"]])
+      #}, simplify = FALSE)
+      #features.ct <- lapply(segments.agg, function(x) {
+      #  lapply(x, prepareFeatures, featureSel = c("count", "total"), cutoff = cutoff)
+      #})
+      #data[["ct"]] <- features.ct
 
       # Features, only count+total for mdists
       #ct <- lapply(data[["segments"]], function(x) {
@@ -281,76 +285,87 @@ inputBoxServer = function(id, data) {
 
     # Likelihood computation
     observe({
-      req(!is.null(segment_input()))
+      req(!is.null(data_input()))
+      req(!(data_input() == ""))
       req(data[["cutoff"]])
       req(data[["outlierThreshold"]])
-      req(data[["featureSelection"]])
 
       is_features <- data[["isFeatures"]]
       cutoff = data[["cutoff"]]
       input_type = data[["inputType"]]
       outlierThreshold = data[["outlierThreshold"]]
-      selected_features = data[["featureSelection"]]
 
       if(input_type == "segments") {
-        obs = as.numeric(segment_input() |>
+        obs = as.numeric(data_input() |>
                            strsplit("\n") |>
                            unlist())
         obs = obs[obs >= cutoff]
         data[["obs"]] = obs
 
-        likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE)
+        likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE, collapseDistant = data[["distant"]])
 
         # From matrix (standard format) to named vectors
-        data[["likelihoods"]] = lapply(likelihoods, function(x) {
-          lik = as.vector(x)
-          names(lik) <- colnames(x)
-          lik
-        })
+
 
         #data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
         #  classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
         #})
 
-        data[["mdists"]] = lapply(data[["ct"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
-                        threshold = outlierThreshold, isFeatures = is_features)
-          sapply(l, `[[`, "dist")
-        })
 
-        data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
-                        threshold = outlierThreshold, isFeatures = is_features)
-          sapply(l, `[[`, "threshold")
-        })
+
+        #data[["mdists"]] = lapply(data[["ct"]], function(x) {
+        #  l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
+        #                threshold = outlierThreshold, isFeatures = is_features)
+        #  sapply(l, `[[`, "dist")
+        #})
+
+        #data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
+        ##  l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
+        #                threshold = outlierThreshold, isFeatures = is_features)
+        #  sapply(l, `[[`, "threshold")
+        #})
       } else if(input_type == "summaries") {
-        values <- lapply(selected_features, function(x) {
-          input[[x]]
-        })
+        obs = list(data_input())
 
-        req(all(!sapply(values, is.null)))
-        req(all(!is.na(values)))
+        req(all(!sapply(obs, is.null)))
+        req(all(!is.na(obs)))
 
-        summaries <- setNames(values, selected_features)
+        data[["obs"]] <- obs
 
-        data[["obs"]] <- summaries
+        likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE, collapseDistant = data[["distant"]])
 
-        data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
-          classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
-        })
+        #data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
+        #  classify(data[["obs"]], x, obsType = input_type, cutoff = cutoff, sort = FALSE) #!!!
+        #})
 
-        data[["mdists"]] = lapply(data[["ct"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
-                        threshold = outlierThreshold, isFeatures = is_features)
-          sapply(l, `[[`, "dist")
-        })
+        #data[["mdists"]] = lapply(data[["ct"]], function(x) {
+        #  l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
+        #                threshold = outlierThreshold, isFeatures = is_features)
+        #  sapply(l, `[[`, "dist")
+        #})
 
-        data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
-          l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
-                        threshold = outlierThreshold, isFeatures = is_features)
-          sapply(l, `[[`, "threshold")
-        })
+        #data[["mdistthreshold"]] = lapply(data[["ct"]], function(x) {
+        #  l <- distance(data[["obs"]], x, cutoff = cutoff, featureSel = c("count", "total"),
+        #                threshold = outlierThreshold, isFeatures = is_features)
+        #  sapply(l, `[[`, "threshold")
+        #})
       }
+
+      data[["likelihoods"]] = lapply(likelihoods, function(x) {
+        lik = as.vector(x)
+        names(lik) <- colnames(x)
+        lik
+      })
+
+      outlier <- outlierAnalysis(data$model, obs, threshold = threshold, collapseDistant = data[["distant"]])
+
+      data[["mdists"]] = sapply(outlier, function(res) {
+        sapply(res[[1]], `[[`, "dist")
+      })
+
+      data[["mdistthreshold"]] = sapply(outlier, function(res) {
+        sapply(res[[1]], `[[`, "threshold")
+      })
 
 
     })
@@ -367,7 +382,10 @@ inputBoxServer = function(id, data) {
         ))
       } else if (input_type == "summaries") {
         showModal(modalDialog(
-          uiOutput(NS(id, "summaries_ui"))
+          uiOutput(NS(id, "summaries_ui")),
+          footer = tagList(
+            actionButton(NS(id, "save_input_summaries"), "Save")
+          )
         ))
       }
     })
@@ -391,7 +409,7 @@ inputBoxServer = function(id, data) {
       x = scan(input$segfile$datapath,
                what = numeric(),
                sep = ",")
-      segment_input(paste(x, collapse = "\n"))
+      data_input(paste(x, collapse = "\n"))
     })
 
     observeEvent(input$example, {
@@ -424,7 +442,7 @@ inputBoxServer = function(id, data) {
         ibdsim2::segmentStats(returnAll = TRUE, unit = "cm")
 
       lens = segs$allSegs |> round(digits = 4)
-      segment_input(paste(lens, collapse ="\n"))
+      data_input(paste(lens, collapse ="\n"))
 
       removeModal()
     })
@@ -466,9 +484,15 @@ inputBoxServer = function(id, data) {
 
 
     # Remember segment input
-    segment_input <- reactiveVal(NULL)
+
+    data_input <- reactiveVal(NULL)
+    observeEvent(data[["inputType"]], {
+      data_input <- reactiveVal(NULL)
+    })
+
+
     observeEvent(input$save_input_segments, {
-      segment_input(input$segmentInput)
+      data_input(input$segmentInput)
       removeModal()
     }, ignoreInit = TRUE)
 
@@ -483,34 +507,58 @@ inputBoxServer = function(id, data) {
         rows = 8,
         width = "100%",
         placeholder = "One segment per line, in cM",
-        value = segment_input()
+        value = data_input()
       )
     })
 
 
     # Summaries UI
 
+    observeEvent(input$save_input_summaries, {
+      inputs <- list(count = input$inputCount, total = input$inputTotal)
+      data_input(inputs)
+      removeModal()
+    }, ignoreInit = TRUE)
     output$summaries_ui <- renderUI({
       req(data[["featureSelection"]])
       req(data[["inputType"]])
 
       if (data[["inputType"]] != "summaries") return(NULL)
 
-      selected_features <- data[["featureSelection"]]
-
-      ui_list <- lapply(selected_features, function(feat) {
-        spec <- feature_specs[[feat]]
+      div(
+        numericInput(
+          inputId = NS(id, "inputCount"),
+          label = "Number of segments (count)",
+          value = data_input()$count,
+          min = 0,
+          step = 1,
+          width = "100%"
+        ),
 
         numericInput(
-          inputId = NS(id,paste0(feat)),
-          label = spec$label,
-          value = spec$value,
-          min = spec$min,
-          step = spec$step
+          inputId = NS(id, "inputTotal"),
+          label = "Total segment length (cM)",
+          value = data_input()$total,
+          min = 0,
+          width = "100%"
         )
-      })
+      )
 
-      tagList(ui_list)
+
+      #ui_list <- lapply(features.summaries, function(feat) {
+      #  spec <- feature_specs[[feat]]
+
+      #  numericInput(
+      #    inputId = NS(id,paste0(feat)),
+      #    label = spec$label,
+      #    value = spec$value,
+      #    min = spec$min,
+      #    step = spec$step,
+      #    width = "100%"
+      #  )
+      #})
+
+      #tagList(ui_list)
 
     })
 
