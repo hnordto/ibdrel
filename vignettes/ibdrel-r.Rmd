@@ -51,7 +51,7 @@ Segments can be converted to a list compatible with `ibdrel` using the function 
 ```{r}
 segments = ibdfindr2ibdrel(ibd)
 
-pred = predict(segments, model)
+pred = predict(model, segments)
 
 pred
 
