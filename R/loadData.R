@@ -16,11 +16,17 @@ loadData <- function(data = NULL) {
 prepareData <- function(data) {
   segmentData = data$segments
   peds = data$peds
-  metadata = pedsMetadata(peds)
+
+  if ("metadata" %in% names(data)) {
+    metadata = data$metadata
+  } else {
+    metadata = pedsMetadata(peds)
+  }
+
 
   data.clean = aggregateSegments(segmentData, metadata, "sex.eqclass")
 
-  data.clean
+  list(segments = data.clean, peds = peds, metadata = metadata)
 }
 
 #'

@@ -12,10 +12,12 @@ outlierAnalysis.ibdrelModel <- function(object, newdata, threshold = 0.95, colla
   metadata = object$metadata
   cutoff = object$cutoff
 
-  features.count.total <- extractCountTotal(model)
+  featureSel = c("count", "total")
+
+  features.count.total <- extractCountTotal(object, featureSel, collapseDistant)
 
   if(!is.null(names(get_inner_element(newdata)))) {
-    if(!any(names(get_inner_element(newdata)) %in% featureSel)) {
+    if(!all(names(get_inner_element(newdata)) %in% featureSel)) {
       stop("Input summaries do not match model features.")
     }
 
@@ -47,12 +49,10 @@ extractCountTotal <- function(object, ...) {
 
 #'
 #'@export
-extractCountTotal.ibdrelModel <- function(object, ...) {
+extractCountTotal.ibdrelModel <- function(object, featureSel, collapseDistant = TRUE, ...) {
   segments = object$segments
   metadata = object$metadata
   cutoff = object$cutoff
-
-  featureSel = c("count", "total")
 
   segments.agg <- lapply(RESOLUTIONS, function(x) {
     aggregateSegments(segments, metadata, x, collapseDistant)

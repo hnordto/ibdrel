@@ -6,6 +6,12 @@
 #' is estimated by kernel density estimation (KDE). Segments below the specified
 #' threshold (`cutoff`) are treated as no IBD.
 #'
+#' @param data IBD segment data as a list with the following elements:
+#'    * `segments`: A nested list where each outer element is a pedigree relationship and each
+#'    inner element is a vector of IBD segment lengths in cM for one instance of sharing. Typically returned by [ibdSimulations()] and [lengthIBD()].
+#'    * `peds`: A list of the pedigrees in `segments` on `pedtools::ped` format.
+#'
+#'
 #' @param data Nested list of training data.
 #'   A hierarchical list structured as:
 #'   \code{data[[class_level]][[class]] -> list of training instances},
@@ -38,16 +44,23 @@
 fitModel <- function(data = NULL,
                      features = "default",
                      cutoff = 7) {
+
   if (is.null(data)) {
     data = loadData()
   } else {
     data = loadData(data)
   }
 
+  metadata = data$metadata
+  peds = data$peds
+  segments = data$segments
+  names(peds) = sapply(peds, annotatePedigree)
+
+
   if (all(features == "default")) {
     features = DEFAULT.FEATURES
 
-    pdfs = lapply(data, preparePdfs, featureSel = features, cutoff = cutoff)
+    pdfs = lapply(segments, preparePdfs, featureSel = features, cutoff = cutoff)
 
 
   } else {
@@ -56,26 +69,17 @@ fitModel <- function(data = NULL,
            paste(VALID.FEATURES, collapse = ", "))
     }
 
-    pdfs = lapply(data, preparePdfs, featureSel = features, cutoff = cutoff)
+    pdfs = lapply(segments, preparePdfs, featureSel = features, cutoff = cutoff)
   }
 
-  names(pdfs) <- names(data)
-
-
-
-  # TEMP: WITH NAMES UNTIL DATA RAW IS UPDATED
-  peds = ibdrel_unilineal$peds
-  names(peds) = sapply(peds, annotatePedigree)
- # peds = peds[names(data)]
-
-  metadata = pedsMetadata(peds)
+  names(pdfs) <- names(segments)
 
   model = list(
     pdfs = pdfs,
     cutoff = cutoff,
     features = features,
     peds = peds,
-    segments = data,
+    segments = segments,
     metadata = metadata
   )
 
