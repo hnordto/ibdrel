@@ -47,7 +47,8 @@ segments <- lengthIBD(sims_training, peds, annotation)
 
 ibdrel_unilineal <- list(
   segments = segments,
-  peds = peds
+  peds = peds,
+  metadata = metadata
 )
 
 usethis::use_data(ibdrel_unilineal, overwrite = T)
