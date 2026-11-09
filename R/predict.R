@@ -12,7 +12,7 @@ predict.ibdrelModel <- function(object, newdata,
 
   if(!is.null(names(get_inner_element(newdata)))) {
 
-    if(!any(names(get_inner_element(newdata)) %in% object$features)) {
+    if(!all(names(get_inner_element(newdata)) %in% object$features)) {
       stop("Input summaries do not match model features.")
     }
 
