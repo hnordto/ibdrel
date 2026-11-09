@@ -66,7 +66,6 @@ likelihoodBoxUI = function(id) {
           label = NULL,
           value = TRUE,
           status = "success",
-          fill = TRUE,
           slim = TRUE,
           inline = FALSE
         ),

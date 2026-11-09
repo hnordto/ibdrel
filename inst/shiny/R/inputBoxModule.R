@@ -34,19 +34,18 @@ helpWidget = function(id) {
 
 # Load data XX FIX LATER XX
 
-#peds = ibdrel::ibdrel_unilineal$peds
-
+peds = ibdrel::ibdrel_unilineal$peds
 annotation <- sapply(peds, annotatePedigree)
-annotation.readable <- sapply(annotation, classTranslator, "sex.eqclass")
-names(annotation) <- annotation.readable
-names(peds) <- annotation
+#annotation.readable <- sapply(annotation, classTranslator, "sex.eqclass")
+#names(annotation) <- annotation.readable
+#names(peds) <- annotation
 
-segmentData = ibdrel::ibdrel_unilineal$segments
-names(segmentData) <- annotation
+#segmentData = ibdrel::ibdrel_unilineal$segments
+#names(segmentData) <- annotation
 #metadata = ibdrel::pedsMetadata(peds)
 
 
-input.types <- c("Segments" = "segments", "Summaries (not yet supported!)" = "summaries")
+input.types <- c("Segments" = "segments", "Summaries" = "summaries")
 
 features.summaries <- c("count", "total")
 
@@ -217,12 +216,20 @@ inputBoxServer = function(id, data) {
     #    lapply(x, prepareFeatures, featureSel = featureSelection, cutoff = cutoff)
     #  })
 
-      model = fitModel(cutoff = cutoff, features = DEFAULT.FEATURES)
+      model = fitModel(cutoff = cutoff, features = featureSelection)
+
+      #if (data[["inputType"]] == "segments") {
+      #  model = fitModel(cutoff = cutoff, features = featureSelection)
+      #} else if(data[["inputType"]] == "summaries") {
+      #  model = fitModel(cutoff = cutoff, features = c("count", "total"))
+      #}
+
+
       data[["model"]] = model
       data[["pdfs"]] <- model$pdfs
       data[["peds"]] <- model$peds
       data[["metadata"]] = model$metadata
-      data[["ct"]] = extractCountTotal(model)
+      data[["ct"]] = extractCountTotal(model, featureSel = c("count", "total"), collapseDistant = data[["distant"]])
 
      # if (input_type == "segments") {
         #features <- lapply(names(data[["segments"]]), function(nm) {
@@ -292,8 +299,9 @@ inputBoxServer = function(id, data) {
 
       is_features <- data[["isFeatures"]]
       cutoff = data[["cutoff"]]
-      input_type = data[["inputType"]]
       outlierThreshold = data[["outlierThreshold"]]
+      metadata = data[["metadata"]]
+      input_type = data[["inputType"]]
 
       if(input_type == "segments") {
         obs = as.numeric(data_input() |>
@@ -302,7 +310,7 @@ inputBoxServer = function(id, data) {
         obs = obs[obs >= cutoff]
         data[["obs"]] = obs
 
-        likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE, collapseDistant = data[["distant"]])
+        likelihoods = predict(data$model, newdata = obs, metadata = metadata, normalize = data[["normalize"]], sort = FALSE, collapseDistant = data[["distant"]])
 
         # From matrix (standard format) to named vectors
 
@@ -332,6 +340,7 @@ inputBoxServer = function(id, data) {
 
         data[["obs"]] <- obs
 
+
         likelihoods = predict(data$model, newdata = obs, metadata = metadata, sort = FALSE, collapseDistant = data[["distant"]])
 
         #data[["likelihoods"]] = lapply(data[["pdfs"]], function(x) {
@@ -357,7 +366,7 @@ inputBoxServer = function(id, data) {
         lik
       })
 
-      outlier <- outlierAnalysis(data$model, obs, threshold = threshold, collapseDistant = data[["distant"]])
+      outlier <- outlierAnalysis(data$model, obs, threshold = outlierThreshold, collapseDistant = data[["distant"]])
 
       data[["mdists"]] = sapply(outlier, function(res) {
         sapply(res[[1]], `[[`, "dist")
@@ -487,7 +496,9 @@ inputBoxServer = function(id, data) {
 
     data_input <- reactiveVal(NULL)
     observeEvent(data[["inputType"]], {
-      data_input <- reactiveVal(NULL)
+      data_input(NULL)
+      data[["obs"]] <- NULL
+      print(data_input())
     })
 
 

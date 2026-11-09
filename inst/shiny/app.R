@@ -65,7 +65,7 @@ server <- function(input, output, session) {
 
   settings = reactiveValues(cutoff = 7,
                             inputType = "segments",
-                            featureSelection = c("count", "total"),
+                            featureSelection = c("count", "length"),
                             outlierThreshold = 0.95)
 
   # Settings
@@ -90,7 +90,7 @@ server <- function(input, output, session) {
         h5("Feature selection"),
         pickerInput("featureSelection", NULL,
                     choices = c("count", "total", "length"),
-                    selected = c("count", "length"),
+                    selected = settings$featureSelection,
                     options = pickerOptions(
                       actionsBox = TRUE,
                       size = 10,
@@ -101,6 +101,14 @@ server <- function(input, output, session) {
       easyClose = TRUE,
       footer = modalButton("Save and close")
     ))
+  })
+
+  observeEvent(input$inputType, {
+    if (input$inputType == "segments") {
+      settings$featureSelection = c("count", "length")
+    } else {
+      settings$featureSelection = c("count", "total")
+    }
   })
 
   observeEvent(input$cutoff, {settings$cutoff = input$cutoff})
