@@ -8,6 +8,7 @@ predict.ibdrelModel <- function(object, newdata,
 
   pdfs = object$pdfs
   cutoff = object$cutoff
+  metadata = if (is.null(metadata)) object$metadata
 
   # Recognize input type: Vector/unnamed list (segments), named list (summaries)
 
@@ -34,10 +35,6 @@ predict.ibdrelModel <- function(object, newdata,
   }
 
   pred = do.call(rbind, pred)
-
-  if (is.null(metadata)) {
-    metadata = pedsMetadata(object$peds)
-  }
 
 
   if (normalize) {
