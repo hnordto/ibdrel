@@ -13,6 +13,7 @@ ibdSimulations = function(pedlist,
                            ids = NULL,
                            map = "decode19",
                            model = "chi",
+                           chrom = "autosomes",
                            keep = "everything",
                            cutoff = 0,
                            max_iter = 5000) {
@@ -25,6 +26,16 @@ ibdSimulations = function(pedlist,
     seeds = rep(NULL, length(pedlist))
   } else {
     seeds = seed
+  }
+
+  if (!(map == "decode19")) {
+    stop("Unknown genetic map. Only 'decode19' supported.")
+  }
+
+  if (chrom == "autosomes") {
+    map = ibdsim2::loadMap(map = map, chrom = 1:22)
+  } else if (chrom == "X" || chrom == "x" || chrom == 23) {
+    map = ibdsim2::loadMap(map = map, chrom = 23)
   }
 
   simulations = list()
@@ -161,6 +172,10 @@ lengthIBD = function(simlist,
 #'@export
 aggregateSegments = function(segments, metadata, metadata.agg.column, collapseDistant = FALSE) {
 
+  # Do not retain sexes of individuals in the relationship.
+  names(segments) <- sapply(names(segments), function(x) {
+    sub("^([^-]*-[^-]*)-.*$", "\\1", x)
+  })
 
   lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, collapseDistant = collapseDistant)
 

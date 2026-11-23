@@ -1,9 +1,14 @@
 #'
 #'@export
-loadData <- function(data = NULL) {
+loadData <- function(data = NULL, chrom) {
 
   if(is.null(data)) {
-    dta = prepareData(ibdrel_unilineal)
+
+    if (chrom == "autosomes" || chrom == "1:22") {
+      dta = prepareData(ibdrel_unilineal)
+    } else if (chrom == "x" || chrom == "X" || chrom == 23) {
+      dta = ibdrel_x
+    }
   } else {
     dta = prepareData(data)
   }

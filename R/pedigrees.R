@@ -52,6 +52,16 @@ degree_to_l = function(degree, full = T) {
 
 }
 
+convertSex <- function(string, from = "parental") {
+  if (from == "parental") {
+    chartr("pm", "mf", string)
+  } else if (from == "sex") {
+    chartr("mf", "pm", string)
+  } else {
+    stop()
+  }
+}
+
 #'
 #' @export
 identify_path_lengths = function(min_path_degree = 0,
@@ -219,7 +229,7 @@ defineSexPath = function(nSteps, half) {
 }
 
 sexCombinations = function(sexPathLength, ordered = T) {
-  sexes = c("p", "m")
+  sexes = c("m", "f")
   combinations = expand.grid(rep(list(sexes), sexPathLength))
   combinations = apply(combinations, 1, paste, collapse = "")
   if (isFALSE(ordered)) {
@@ -294,7 +304,7 @@ getPath = function(pedigree, ids = NULL) {
 }
 
 sexstr_to_int = function(sexstr) {
-  sexes = list("p" = 1, "m" = 2)
+  sexes = list("m" = 1, "f" = 2)
 
   return (sexes[sexstr][[1]])
 
@@ -321,6 +331,13 @@ getSwpSexPath = function(ped, sexPath) {
   }
 
   return (swpIds)
+
+}
+
+getSexVerbal <- function(ped) {
+  sex = pedtools::getSex(ped, ids = specifyIndividuals(ped))
+
+  return (paste(sexInt2Chr[sex], collapse=""))
 
 }
 
@@ -381,7 +398,7 @@ constructPedigrees = function(pedigrees_df) {
 }
 
 #' @export
-annotatePedigree = function(ped, ids = NULL, ignoreSex = FALSE) {
+annotatePedigree = function(ped, ids = NULL, ignoreSex = FALSE, includeInds = FALSE) {
   if (is.null(ids)) {
     ids = specifyIndividuals(ped)
   }
@@ -415,7 +432,7 @@ annotatePedigree = function(ped, ids = NULL, ignoreSex = FALSE) {
 
     if (isFALSE(ignoreSex)) {
 
-      sexpath = rel$sexPath
+      sexpath = convertSex(rel$sexPath)
 
       sexpath.annot <- condenseSexpath(sexpath)
 
@@ -429,6 +446,10 @@ annotatePedigree = function(ped, ids = NULL, ignoreSex = FALSE) {
 
     } else {
       annotation = annot
+    }
+
+    if (isTRUE(includeInds)) {
+      annotation = paste0(annotation, "-", getSexVerbal(ped))
     }
 
 
@@ -448,10 +469,12 @@ condenseSexpath <- function(sexpath) {
   }
 }
 
-#' @export
-pedsMetadata = function(pedlist) {
+sexInt2Chr <- c("m", "f")
 
-  names(pedlist) = sapply(pedlist, annotatePedigree)
+#' @export
+pedsMetadata = function(pedlist, includeInds = FALSE) {
+
+  names(pedlist) = sapply(pedlist, annotatePedigree, includeInds = includeInds)
 
 
   metadata = data.frame(rel = names(pedlist))
@@ -468,12 +491,20 @@ pedsMetadata = function(pedlist) {
 
   metadata$kin = sapply(pedlist, pedKinship)
 
-  equivalence.classes = groupEquivalence(pedlist)
+  equivalence.classes = groupEquivalence(pedlist, names(pedlist))
 
   metadata = merge(metadata, equivalence.classes,
                    by = "rel", all.x = TRUE, all.y = FALSE)
 
   metadata$sexconfig <- sapply(metadata$sex.eqclass, sexConfig)
+
+
+  metadata$sexInds <- sapply(pedlist, sexOfInd)
+
+  if (includeInds == TRUE) {
+    metadata$sex.eqclass <- metadata$rel
+    metadata$rel.eqclass <- paste0(metadata$rel.eqclass, "-", metadata$sexInds)
+  }
 
 
   return(metadata)
@@ -516,6 +547,15 @@ pedType = function(ped) {
   type
 }
 
+sexOfInd <- function(ped) {
+  ids = specifyIndividuals(ped)
+
+  sexInt = pedtools::getSex(ped, ids)
+
+  paste(sexInt2Chr[sexInt], collapse = "")
+
+}
+
 
 equivalenceRep.dep <- function(degree, half) {
 
@@ -548,9 +588,7 @@ equivalenceAnnot <- function(degree, half) {
 
 # Should do the following things: Give Eqclass sex code, eqclass detailed code, sex-aware representative, sex-averaged representative
 #' @export
-groupEquivalence = function(pedlist) {
-  annotation = sapply(pedlist, annotatePedigree)
-  names(pedlist) <- annotation
+groupEquivalence = function(pedlist, annotation) {
 
   for (i in seq_along(pedlist)) {
     ped = pedlist[[i]]

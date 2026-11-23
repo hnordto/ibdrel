@@ -1,7 +1,8 @@
 #'
 #' @export
 predict.ibdrelModel <- function(object, newdata,
-                    metadata = NULL, normalize = TRUE, sort = TRUE, collapseDistant = TRUE) {
+                    metadata = NULL, normalize = TRUE, sort = TRUE, collapseDistant = TRUE,
+                    inputType = "segments") {
 
   # Pre-loaded metadata speeds up prediction
 
@@ -10,7 +11,7 @@ predict.ibdrelModel <- function(object, newdata,
 
   # Recognize input type: Vector/unnamed list (segments), named list (summaries)
 
-  if(!is.null(names(get_inner_element(newdata)))) {
+  if(inputType == "summaries") {
 
     if(!all(names(get_inner_element(newdata)) %in% object$features)) {
       stop("Input summaries do not match model features.")
@@ -58,6 +59,7 @@ predict.ibdrelModel <- function(object, newdata,
 }
 
 aggregateLookup <- function(pred, metadata, metadata.agg.column, collapseDistant) {
+
   lookup = lookupClass(NULL, metadata.agg.column, "rel", metadata, collapseDistant)
 
   if (isTRUE(collapseDistant)) {
@@ -84,10 +86,28 @@ aggregateLogs <- function(pred, metadata, metadata.agg.column, collapseDistant =
 }
 
 # Helper function to retrieve each observation when multiple are inputted
+
 get_inner_element <- function(x) {
   if (!is.list(x)) {
     return(list(x))
-  } else {
-    return(unlist(lapply(x, get_inner_element), recursive = FALSE))
   }
+
+  result <- list()
+
+  for (i in seq_along(x)) {
+    element <- x[[i]]
+    inner <- get_inner_element(element)
+
+    if (!is.list(element) && !is.null(names(x))) {
+      names(inner) <- names(x)[i]
+    }
+
+    result <- c(result, inner)
+
+  }
+
+  result
+
+
 }
+

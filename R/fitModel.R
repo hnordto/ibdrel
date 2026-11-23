@@ -43,10 +43,11 @@
 #' @export
 fitModel <- function(data = NULL,
                      features = "default",
-                     cutoff = 7) {
+                     cutoff = 7,
+                     chrom = "autosomes") {
 
   if (is.null(data)) {
-    data = loadData()
+    data = loadData(data = data, chrom = chrom)
   } else {
     data = loadData(data)
   }
